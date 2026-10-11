@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -34,6 +35,8 @@ func validateOutboundProxy(value string) error {
 }
 
 type requestOptionsHTTP struct {
+	Context     context.Context
+	MaxBytes    int64
 	URL, Method string
 	Body        interface{}
 	Form        url.Values
@@ -59,9 +62,16 @@ func (s *service) request(options requestOptionsHTTP) (*responseHTTP, error) {
 		return nil, err
 	}
 	defer response.Body.Close()
-	raw, err := io.ReadAll(response.Body)
+	var reader io.Reader = response.Body
+	if options.MaxBytes > 0 {
+		reader = io.LimitReader(reader, options.MaxBytes+1)
+	}
+	raw, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
+	}
+	if options.MaxBytes > 0 && int64(len(raw)) > options.MaxBytes {
+		return nil, errors.New("upstream response exceeds size limit")
 	}
 	return &responseHTTP{Status: response.StatusCode, Raw: raw}, nil
 }
@@ -84,7 +94,11 @@ func outboundRequest(options requestOptionsHTTP) (*http.Request, error) {
 	if method == "" {
 		method = "GET"
 	}
-	request, err := http.NewRequest(method, options.URL, reader)
+	ctx := options.Context
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	request, err := http.NewRequestWithContext(ctx, method, options.URL, reader)
 	if err != nil {
 		return nil, err
 	}

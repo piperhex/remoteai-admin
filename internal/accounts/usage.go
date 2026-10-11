@@ -102,7 +102,10 @@ func (s *service) sendCodex(row *storedAccount, options requestOptionsHTTP) (*re
 		return nil, platform.NewError(400, "当前账号没有可用的 Codex 登录凭据")
 	}
 	options.Proxy = true
-	options.Headers = map[string]string{"Authorization": "Bearer " + token}
+	if options.Headers == nil {
+		options.Headers = make(map[string]string)
+	}
+	options.Headers["Authorization"] = "Bearer " + token
 	if id := row.codexID(); id != "" {
 		options.Headers["ChatGPT-Account-Id"] = id
 	}

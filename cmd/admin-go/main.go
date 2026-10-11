@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/codex-switch/admin-go/internal/accounts"
 	"github.com/codex-switch/admin-go/internal/identity"
 	"github.com/codex-switch/admin-go/internal/migrations"
 	"github.com/codex-switch/admin-go/internal/platform"
@@ -55,6 +56,8 @@ func run() error {
 			slog.Error("shutdown flush failed", "error", err)
 		}
 	}()
+	stopModels := accounts.StartModelCatalogRefresh(deps)
+	defer stopModels()
 	return serve(config, server.Handler(router))
 }
 

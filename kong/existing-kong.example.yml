@@ -26,6 +26,7 @@ services:
           - /faqs
           - /currency-rates
           - /token-cost-presets
+          - /official-models
           - /telemetry
           - /device-switch
           - /device-chat
