@@ -26,20 +26,28 @@ type updateSeed struct {
 	expires   time.Time
 	owner     string
 	ranges    bool
+	protocol  int
+	ownOnly   bool
+	key       string
 }
 
 type updateTransfer struct {
-	seed, receiver *peer
-	expires        time.Time
+	seed, receiver       *peer
+	expires              time.Time
+	protocol             int
+	seedKey, receiverKey string
 }
 
 // Only opaque artifact identifiers and short-lived connection grants cross accounts.
 // Neither update metadata nor package bytes are accepted or relayed here.
 type updatePeerTracker struct {
-	native    platform.JSON
-	seeds     map[*peer]updateSeed
-	transfers map[string]updateTransfer
-	lastFind  map[*peer]time.Time
+	native      platform.JSON
+	seeds       map[*peer]updateSeed
+	transfers   map[string]updateTransfer
+	lastFind    map[*peer]time.Time
+	accountFind map[string]time.Time
+	failed      map[string]time.Time
+	lastPrune   time.Time
 }
 
 func newUpdatePeerTracker(service *Service) *updatePeerTracker {
@@ -49,29 +57,48 @@ func newUpdatePeerTracker(service *Service) *updatePeerTracker {
 		native, _ = nativeTraversalConfig(service.deps.Config)
 	}
 	return &updatePeerTracker{native: native, seeds: map[*peer]updateSeed{},
-		transfers: map[string]updateTransfer{}, lastFind: map[*peer]time.Time{}}
+		transfers: map[string]updateTransfer{}, lastFind: map[*peer]time.Time{},
+		accountFind: map[string]time.Time{}, failed: map[string]time.Time{}}
 }
 
 func (g *ControlGateway) receiveUpdatePeer(client *peer, session controlSession, message platform.JSON) {
 	g.mu.Lock()
-	defer g.mu.Unlock()
 	device := session.kind == "device" && g.sockets[session.owner+":"+session.device] == client
 	mobile := session.kind == "subscriber" && !session.expires.IsZero() && time.Now().Before(session.expires)
 	if (!device && !mobile) || client.serviceHost.Load() || client.closed.Load() {
+		g.mu.Unlock()
 		return
 	}
+	if g.updateCluster != nil {
+		g.mu.Unlock()
+		g.updateCluster.receive(client, session, message)
+		return
+	}
+	defer g.mu.Unlock()
 	t := g.updatePeers
 	t.prune(time.Now())
+	key := session.owner + ":" + session.device
+	if mobile {
+		key = session.owner + ":mobile"
+	}
+	t.reattach(client, key)
 	switch message["type"] {
 	case "update-peer-advertise":
 		if device {
 			t.advertise(client, message, session.owner)
+			if seed, ok := t.seeds[client]; ok {
+				seed.key = key
+				t.seeds[client] = seed
+			}
 		}
 	case "update-peer-find":
-		t.find(client, message, session.owner)
+		t.find(client, message, session.owner, key)
 	case "update-peer-done":
 		id, _ := message["sessionId"].(string)
 		if transfer, ok := t.transfers[id]; ok && (transfer.seed == client || transfer.receiver == client) {
+			if failed, _ := message["failed"].(bool); failed && transfer.receiver == client {
+				t.failed[transfer.receiverKey+"|"+transfer.seedKey] = time.Now().Add(5 * time.Minute)
+			}
 			t.finish(id, transfer)
 		}
 	}
@@ -110,10 +137,13 @@ func (t *updatePeerTracker) advertise(client *peer, message platform.JSON, owner
 		return
 	}
 	ranges, _ := message["ranges"].(bool)
-	t.seeds[client] = updateSeed{artifacts, time.Now().Add(updateSeedLifetime), owner, ranges}
+	protocol, _ := message["packageProtocol"].(float64)
+	ownOnly, _ := message["ownOnly"].(bool)
+	t.seeds[client] = updateSeed{artifacts: artifacts, expires: time.Now().Add(updateSeedLifetime),
+		owner: owner, ranges: ranges, protocol: int(protocol), ownOnly: ownOnly}
 }
 
-func (t *updatePeerTracker) find(client *peer, message platform.JSON, owner string) {
+func (t *updatePeerTracker) find(client *peer, message platform.JSON, owner, key string) {
 	request, _ := message["requestId"].(string)
 	artifact, _ := message["artifact"].(string)
 	if len(request) == 0 || len(request) > 80 {
@@ -121,24 +151,41 @@ func (t *updatePeerTracker) find(client *peer, message platform.JSON, owner stri
 	}
 	unavailable := func() { client.send(platform.JSON{"type": "update-peer-unavailable", "requestId": request}, nil) }
 	if !validUpdateArtifact(artifact) || t.native == nil || len(t.transfers) >= maxUpdateTransfers ||
-		t.downloading(client) || time.Since(t.lastFind[client]) < updateFindInterval {
+		t.downloading(client) || time.Since(t.accountFind[key]) < updateFindInterval {
 		unavailable()
 		return
 	}
 	t.lastFind[client] = time.Now()
+	t.accountFind[key] = time.Now()
 	count := 1
 	if requested, ok := message["maxPeers"].(float64); ok && requested >= 2 {
 		count = maxUpdateDownloadPeers
 	}
 	seeds := t.selectSeeds(client, artifact, owner, count)
+	requestedProtocol, _ := message["packageProtocol"].(float64)
+	ownOnly, _ := message["ownOnly"].(bool)
+	selected := seeds[:0]
+	for _, seed := range seeds {
+		entry := t.seeds[seed]
+		if (ownOnly && entry.owner != owner) || (requestedProtocol >= 2 && entry.protocol < 2) ||
+			time.Now().Before(t.failed[key+"|"+entry.key]) {
+			continue
+		}
+		selected = append(selected, seed)
+	}
+	seeds = selected[:min(count, len(selected))]
 	if len(seeds) == 0 || len(t.transfers)+len(seeds) > maxUpdateTransfers {
 		unavailable()
 		return
 	}
 	configs := make([]platform.JSON, 0, len(seeds))
 	for _, seed := range seeds {
-		config := t.grant(seed, client, artifact)
+		config := t.grant(seed, client, updateGrantRequest{artifact, owner, int(requestedProtocol)})
 		if config != nil {
+			id := config["sessionId"].(string)
+			transfer := t.transfers[id]
+			transfer.receiverKey = key
+			t.transfers[id] = transfer
 			configs = append(configs, config)
 		}
 	}
@@ -153,19 +200,30 @@ func (t *updatePeerTracker) find(client *peer, message platform.JSON, owner stri
 	}
 }
 
-func (t *updatePeerTracker) grant(seed, client *peer, artifact string) platform.JSON {
+type updateGrantRequest struct {
+	artifact, owner string
+	protocol        int
+}
+
+func (t *updatePeerTracker) grant(seed, client *peer, request updateGrantRequest) platform.JSON {
 	secret := make([]byte, 32)
 	if _, err := rand.Read(secret); err != nil {
 		return nil
 	}
 	id := "update-" + uuid.NewString()
 	expires := time.Now().Add(updateTransferLifetime)
-	t.transfers[id] = updateTransfer{seed, client, expires}
+	protocol := 0
+	if request.protocol >= 2 && t.seeds[seed].protocol >= 2 {
+		protocol = 2
+	}
+	t.transfers[id] = updateTransfer{seed: seed, receiver: client, expires: expires,
+		protocol: protocol, seedKey: t.seeds[seed].key}
 	grant := func(desktop bool) platform.JSON {
 		return platform.JSON{"sessionId": id, "secret": hex.EncodeToString(secret), "desktop": desktop,
-			"expiresAt": expires.UnixMilli(), "servers": t.native["servers"], "stunServers": t.native["stunServers"]}
+			"expiresAt": expires.UnixMilli(), "servers": t.native["servers"], "stunServers": t.native["stunServers"],
+			"packageProtocol": protocol, "sameAccount": t.seeds[seed].owner == request.owner}
 	}
-	seed.send(platform.JSON{"type": "update-peer-offer", "artifact": artifact, "config": grant(true)}, nil)
+	seed.send(platform.JSON{"type": "update-peer-offer", "artifact": request.artifact, "config": grant(true)}, nil)
 	return grant(false)
 }
 
@@ -186,7 +244,7 @@ func (t *updatePeerTracker) selectSeeds(receiver *peer, artifact, owner string, 
 	var candidates []*peer
 	for client, seed := range t.seeds {
 		if client == receiver || client.closed.Load() || uploads[client] >= maxUpdateUploads ||
-			(count > 1 && !seed.ranges) {
+			(count > 1 && !seed.ranges) || (seed.ownOnly && seed.owner != owner) {
 			continue
 		}
 		for _, available := range seed.artifacts {
@@ -205,10 +263,14 @@ func (t *updatePeerTracker) selectSeeds(receiver *peer, artifact, owner string, 
 		}
 		return uploads[a] < uploads[b]
 	})
-	return candidates[:min(count, len(candidates))]
+	return candidates
 }
 
 func (t *updatePeerTracker) prune(now time.Time) {
+	if now.Sub(t.lastPrune) < time.Second {
+		return
+	}
+	t.lastPrune = now
 	for client, seed := range t.seeds {
 		if client.closed.Load() || !now.Before(seed.expires) {
 			delete(t.seeds, client)
@@ -224,15 +286,40 @@ func (t *updatePeerTracker) prune(now time.Time) {
 			delete(t.lastFind, client)
 		}
 	}
+	for key, last := range t.accountFind {
+		if now.Sub(last) > time.Minute {
+			delete(t.accountFind, key)
+		}
+	}
+	for key, until := range t.failed {
+		if !now.Before(until) {
+			delete(t.failed, key)
+		}
+	}
 }
 
 func (t *updatePeerTracker) disconnect(client *peer) {
 	delete(t.seeds, client)
 	delete(t.lastFind, client)
 	for id, transfer := range t.transfers {
-		if transfer.seed == client || transfer.receiver == client {
+		if transfer.protocol < 2 && (transfer.seed == client || transfer.receiver == client) {
 			t.finish(id, transfer)
 		}
+	}
+}
+
+func (t *updatePeerTracker) reattach(client *peer, key string) {
+	for id, transfer := range t.transfers {
+		if transfer.protocol < 2 {
+			continue
+		}
+		if transfer.seedKey == key {
+			transfer.seed = client
+		}
+		if transfer.receiverKey == key {
+			transfer.receiver = client
+		}
+		t.transfers[id] = transfer
 	}
 }
 

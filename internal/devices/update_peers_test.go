@@ -112,7 +112,8 @@ func TestUpdatePeersExpiryDisconnectAndUploadLimit(t *testing.T) {
 	artifact := strings.Repeat("a", 64)
 	advertiseUpdate(g, seed, artifact)
 	for index := 0; index < 2; index++ {
-		g.updatePeers.transfers[string(rune('a'+index))] = updateTransfer{seed, queuedPeer(), time.Now().Add(time.Hour)}
+		g.updatePeers.transfers[string(rune('a'+index))] = updateTransfer{
+			seed: seed, receiver: queuedPeer(), expires: time.Now().Add(time.Hour)}
 	}
 	findUpdate(g, receiver, artifact)
 	if updateFrame(t, receiver)["type"] != "update-peer-unavailable" {

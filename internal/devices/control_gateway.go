@@ -31,13 +31,14 @@ type ControlGateway struct {
 	updates              map[string]pendingAppUpdate
 	commands             map[string]pendingRemoteCommand
 	updatePeers          *updatePeerTracker
+	updateCluster        *updatePeerCluster
 }
 
 func newControlGateway(service *Service) *ControlGateway {
 	return &ControlGateway{service: service, sessions: map[*peer]controlSession{}, sockets: map[string]*peer{},
 		subscribers: map[string]map[*peer]bool{}, pending: map[string]pendingCommand{},
 		updates: map[string]pendingAppUpdate{}, commands: map[string]pendingRemoteCommand{},
-		updatePeers: newUpdatePeerTracker(service)}
+		updatePeers: newUpdatePeerTracker(service), updateCluster: newUpdatePeerCluster(service)}
 }
 
 func (g *ControlGateway) serve(c *gin.Context) {
@@ -265,6 +266,9 @@ func (g *ControlGateway) disconnect(client *peer) {
 	g.disconnectAppUpdates(client)
 	g.disconnectRemoteCommands(client)
 	g.updatePeers.disconnect(client)
+	if g.updateCluster != nil {
+		g.updateCluster.disconnect(client)
+	}
 	session, exists := g.sessions[client]
 	delete(g.sessions, client)
 	if !exists {
