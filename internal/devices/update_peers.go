@@ -15,7 +15,7 @@ const (
 	updateTransferLifetime = 20 * time.Minute
 	maxUpdateSeeds         = 10000
 	maxUpdateTransfers     = 1024
-	maxUpdateSeedPackages  = 3
+	maxUpdateSeedPackages  = 6
 	maxUpdateDownloadPeers = 3
 	maxUpdateUploads       = 2
 	updateFindInterval     = 10 * time.Second
