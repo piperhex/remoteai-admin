@@ -14,6 +14,9 @@ func (s *service) registerModelCatalog(r *gin.Engine) {
 	admin.GET("", s.deps.RequirePermissions("admin.official-accounts.read"), noStore,
 		endpoint(func(c *gin.Context) (interface{}, error) { return s.readModelCatalog(c.Request.Context()) }))
 	manage := s.deps.RequirePermissions("admin.official-accounts.manage")
+	admin.GET("/settings", s.deps.RequirePermissions("admin.official-accounts.read"), noStore,
+		endpoint(func(c *gin.Context) (interface{}, error) { return s.readModelRefreshSettings(c.Request.Context()) }))
+	admin.PATCH("/settings", manage, endpoint(s.editModelRefreshSettings))
 	admin.PATCH("", manage, endpoint(s.editModelCatalog))
 	admin.POST("/refresh", manage, endpoint(func(c *gin.Context) (interface{}, error) {
 		return s.refreshModelCatalog(c.Request.Context(), true)

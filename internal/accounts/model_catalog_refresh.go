@@ -21,10 +21,14 @@ const codexReleaseURL = "https://registry.npmjs.org/@openai/codex/latest"
 
 var stableModelVersion = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
 var claimModelRefresh = redis.NewScript(`
+local settings = {enabled = true, intervalMinutes = tonumber(ARGV[4]), revision = ''}
+local savedSettings = redis.call('GET', KEYS[3])
+if savedSettings then settings = cjson.decode(savedSettings) end
+if ARGV[1] == '0' and (not settings.enabled or settings.revision ~= ARGV[5]) then return 0 end
 if redis.call('EXISTS', KEYS[1]) == 1 then return 0 end
 if ARGV[1] == '0' and redis.call('EXISTS', KEYS[2]) == 1 then return 0 end
 redis.call('SET', KEYS[1], ARGV[2], 'PX', ARGV[3])
-redis.call('SET', KEYS[2], '1', 'PX', ARGV[4])
+if settings.enabled then redis.call('SET', KEYS[2], '1', 'PX', settings.intervalMinutes * 60000) end
 return 1
 `)
 var releaseModelRefresh = redis.NewScript(`
@@ -32,7 +36,7 @@ if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) 
 return 0
 `)
 
-// StartModelCatalogRefresh prefetches independently of readers. Stop it before closing Redis or SQL.
+// StartModelCatalogRefresh follows the shared refresh settings. Stop it before closing Redis or SQL.
 func StartModelCatalogRefresh(deps *platform.Dependencies) func() {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -68,10 +72,14 @@ func (s *service) refreshModelCatalogWith(parent context.Context, force bool,
 	}
 	ctx, cancel := context.WithTimeout(parent, modelCatalogRefreshTimeout)
 	defer cancel()
+	settings, err := s.readModelRefreshSettings(ctx)
+	if err != nil {
+		return nil, err
+	}
 	token := newID()
 	claimed, err := claimModelRefresh.Run(ctx, s.deps.Redis,
-		[]string{modelCatalogLockKey, modelCatalogAttemptKey}, force, token,
-		(modelCatalogRefreshTimeout + time.Minute).Milliseconds(), modelCatalogInterval.Milliseconds()).Int()
+		[]string{modelCatalogLockKey, modelCatalogAttemptKey, modelCatalogSettingsKey}, force, token,
+		(modelCatalogRefreshTimeout + time.Minute).Milliseconds(), defaultModelRefreshMinutes, settings.Revision).Int()
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +98,9 @@ func (s *service) refreshModelCatalogWith(parent context.Context, force bool,
 	if err != nil {
 		return nil, err
 	}
-	return snapshot, s.saveModelCatalog(ctx, snapshot, previous.Revision)
+	return snapshot, s.persistModelCatalog(ctx, snapshot, modelCatalogSaveOptions{
+		PreviousRevision: previous.Revision, Automatic: !force, SettingsRevision: settings.Revision,
+	})
 }
 
 func (s *service) loadModelCatalog(ctx context.Context, previousVersion string) (*modelCatalogSnapshot, error) {
@@ -129,10 +139,7 @@ func (s *service) fetchModelCatalog(ctx context.Context, version string) (json.R
 		return nil, err
 	}
 	for index := range rows {
-		response, err := s.codexRequest(&storedAccount{System: &rows[index]}, requestOptionsHTTP{
-			URL: officialModelsURL + "?client_version=" + url.QueryEscape(version), Context: ctx,
-			MaxBytes: maxModelCatalogBytes, Headers: map[string]string{"User-Agent": "codex_cli_rs/" + version},
-		})
+		response, err := s.codexRequest(&storedAccount{System: &rows[index]}, modelCatalogRequest(ctx, version))
 		if err == nil && response.ok() && validateModelCatalog(response.Raw) == nil {
 			return json.RawMessage(response.Raw), nil
 		}
@@ -141,4 +148,11 @@ func (s *service) fetchModelCatalog(ctx context.Context, version string) (json.R
 		}
 	}
 	return nil, platform.NewError(502, "暂时无法获取官方模型列表，请检查官方账户后重试。现有列表已保留。")
+}
+
+func modelCatalogRequest(ctx context.Context, version string) requestOptionsHTTP {
+	return requestOptionsHTTP{
+		URL: officialModelsURL + "?client_version=" + url.QueryEscape(version), Context: ctx,
+		MaxBytes: maxModelCatalogBytes, Headers: map[string]string{"User-Agent": "codex_cli_rs/" + version},
+	}
 }

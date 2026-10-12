@@ -15,7 +15,6 @@ import (
 const modelCatalogKey = "official-models:catalog:v1"
 const modelCatalogAttemptKey = "official-models:next-refresh:v1"
 const modelCatalogLockKey = "official-models:refresh-lock:v1"
-const modelCatalogInterval = 30 * time.Minute
 const maxModelCatalogBytes = 2 * 1024 * 1024
 
 // The last valid catalog has no TTL: upstream outages must not erase working models.
@@ -77,13 +76,32 @@ local current = redis.call('GET', KEYS[1])
 local revision = ''
 if current then revision = cjson.decode(current).revision end
 if revision ~= ARGV[1] then return 0 end
+local settings = {enabled = true, intervalMinutes = tonumber(ARGV[3]), revision = ''}
+local savedSettings = redis.call('GET', KEYS[3])
+if savedSettings then settings = cjson.decode(savedSettings) end
+if ARGV[4] == '1' and (not settings.enabled or settings.revision ~= ARGV[5]) then return -1 end
 redis.call('SET', KEYS[1], ARGV[2])
-redis.call('SET', KEYS[2], '1', 'PX', ARGV[3])
+if settings.enabled then
+  redis.call('SET', KEYS[2], '1', 'PX', settings.intervalMinutes * 60000)
+else
+  redis.call('DEL', KEYS[2])
+end
 return 1
 `)
 
+type modelCatalogSaveOptions struct {
+	PreviousRevision string
+	Automatic        bool
+	SettingsRevision string
+}
+
 // Compare revisions so a slow refresh cannot overwrite a manual edit made while it was running.
 func (s *service) saveModelCatalog(ctx context.Context, snapshot *modelCatalogSnapshot, previous string) error {
+	return s.persistModelCatalog(ctx, snapshot, modelCatalogSaveOptions{PreviousRevision: previous})
+}
+
+func (s *service) persistModelCatalog(ctx context.Context, snapshot *modelCatalogSnapshot,
+	options modelCatalogSaveOptions) error {
 	if err := validateModelCatalog(snapshot.Catalog); err != nil {
 		return err
 	}
@@ -97,12 +115,16 @@ func (s *service) saveModelCatalog(ctx context.Context, snapshot *modelCatalogSn
 		return err
 	}
 	saved, err := saveModelCatalog.Run(ctx, s.deps.Redis,
-		[]string{modelCatalogKey, modelCatalogAttemptKey}, previous, raw, modelCatalogInterval.Milliseconds()).Int()
+		[]string{modelCatalogKey, modelCatalogAttemptKey, modelCatalogSettingsKey}, options.PreviousRevision, raw,
+		defaultModelRefreshMinutes, options.Automatic, options.SettingsRevision).Int()
 	if err != nil {
 		return err
 	}
 	if saved == 0 {
 		return platform.NewError(409, "模型列表已更新，请重新加载后再操作。")
+	}
+	if saved == -1 {
+		return platform.NewError(409, "自动更新设置已更改，本次更新未保存。")
 	}
 	return nil
 }

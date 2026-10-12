@@ -36,7 +36,7 @@ func modelCacheTestService(t *testing.T) *service {
 		t.Skip("set MODEL_CATALOG_TEST_REDIS to an isolated Redis for cache integration tests")
 	}
 	client := redis.NewClient(&redis.Options{Addr: address})
-	keys := []string{modelCatalogKey, modelCatalogLockKey, modelCatalogAttemptKey}
+	keys := []string{modelCatalogKey, modelCatalogLockKey, modelCatalogAttemptKey, modelCatalogSettingsKey}
 	if err := client.Del(t.Context(), keys...).Err(); err != nil {
 		t.Fatal(err)
 	}
@@ -82,10 +82,10 @@ func TestModelCatalogRedisRetentionAndConcurrentEdits(t *testing.T) {
 func TestModelCatalogRefreshLockAndCadence(t *testing.T) {
 	s := modelCacheTestService(t)
 	ctx := t.Context()
-	keys := []string{modelCatalogLockKey, modelCatalogAttemptKey}
+	keys := []string{modelCatalogLockKey, modelCatalogAttemptKey, modelCatalogSettingsKey}
 	claim := func(force bool, token string) int {
 		result, err := claimModelRefresh.Run(ctx, s.deps.Redis, keys, force, token,
-			modelCatalogRefreshTimeout.Milliseconds(), modelCatalogInterval.Milliseconds()).Int()
+			modelCatalogRefreshTimeout.Milliseconds(), defaultModelRefreshMinutes, "").Int()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -160,7 +160,9 @@ func TestModelCatalogPublicReadAndAdminPermissions(t *testing.T) {
 func TestModelCatalogRequestUsesUsageOutboundProxy(t *testing.T) {
 	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Host != "official.invalid" || r.Header.Get("Authorization") != "Bearer fixture" ||
-			r.Header.Get("ChatGPT-Account-Id") != "account" || r.Header.Get("User-Agent") != "codex_cli_rs/0.152.0" {
+			r.Header.Get("ChatGPT-Account-Id") != "account" || r.Header.Get("User-Agent") != "codex_cli_rs/0.170.0" ||
+			r.Header.Get("originator") != "codex_cli_rs" || r.Method != http.MethodGet ||
+			r.URL.Query().Get("client_version") != "0.170.0" {
 			t.Error("model request lost upstream routing or headers")
 		}
 		w.Write([]byte(`{"models":[{"slug":"test"}]}`))
@@ -170,15 +172,15 @@ func TestModelCatalogRequestUsesUsageOutboundProxy(t *testing.T) {
 	id := "account"
 	row := &storedAccount{System: &systemAccount{CodexAccountID: &id,
 		Auth: object{"tokens": object{"access_token": "fixture"}}}}
-	response, err := s.codexRequest(row, requestOptionsHTTP{URL: "http://official.invalid/models",
-		Context: t.Context(), MaxBytes: maxModelCatalogBytes,
-		Headers: map[string]string{"User-Agent": "codex_cli_rs/0.152.0"}})
+	options := modelCatalogRequest(t.Context(), "0.170.0")
+	options.URL = strings.Replace(options.URL, "https://chatgpt.com/backend-api/codex", "http://official.invalid", 1)
+	response, err := s.codexRequest(row, options)
 	if err != nil || validateModelCatalog(response.Raw) != nil {
 		t.Fatal("proxied model fetch failed", err)
 	}
 	s.outbound.proxy.CloseIdleConnections()
-	if _, err := s.sendCodex(row, requestOptionsHTTP{URL: "http://official.invalid/models", MaxBytes: 1,
-		Headers: map[string]string{"User-Agent": "codex_cli_rs/0.152.0"}}); err == nil {
+	options.MaxBytes = 1
+	if _, err := s.sendCodex(row, options); err == nil {
 		t.Fatal("oversized upstream response accepted")
 	}
 }
