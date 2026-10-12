@@ -60,6 +60,8 @@ func TestHelpSettingsPermissionsAndStrictInput(t *testing.T) {
 		{http.MethodPatch, "admin.official-accounts.read", `{}`, 403},
 		{http.MethodPatch, "admin.official-accounts.manage", `{"model":"x","systemPrompt":"help","extra":true}`, 400},
 		{http.MethodPatch, "admin.official-accounts.manage", `{"model":"x","systemPrompt":"help"} {}`, 400},
+		{http.MethodPatch, "admin.official-accounts.manage", `{"model":"x","effort":"unknown","systemPrompt":"help"}`, 400},
+		{http.MethodPatch, "admin.official-accounts.manage", `{"model":"x","effort":1,"systemPrompt":"help"}`, 400},
 		{http.MethodPatch, "admin.official-accounts.manage", `{"model":"x","systemPrompt":"help"}`, 503},
 	} {
 		request := httptest.NewRequest(test.method, "/admin/api/help-assistant", strings.NewReader(test.body))
@@ -68,6 +70,26 @@ func TestHelpSettingsPermissionsAndStrictInput(t *testing.T) {
 		router.ServeHTTP(recorder, request)
 		if recorder.Code != test.status {
 			t.Fatalf("%+v: %d %s", test, recorder.Code, recorder.Body.String())
+		}
+	}
+}
+
+func TestHelpSettingsReasoningEffort(t *testing.T) {
+	for _, effort := range []string{"none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra", ""} {
+		input := helpSettings{Model: "official", Effort: effort, SystemPrompt: "Help politely"}
+		normalized, err := normalizeHelpSettings(input)
+		if effort == "" {
+			effort = defaultHelpEffort
+		}
+		if err != nil || normalized.Effort != effort {
+			t.Fatal(normalized, err)
+		}
+	}
+	for _, effort := range []string{"unknown", "HIGH", strings.Repeat("x", 1000)} {
+		if _, err := normalizeHelpSettings(helpSettings{
+			Model: "official", Effort: effort, SystemPrompt: "Help politely",
+		}); err == nil {
+			t.Fatalf("accepted effort %q", effort)
 		}
 	}
 }

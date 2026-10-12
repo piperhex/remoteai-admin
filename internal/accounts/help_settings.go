@@ -16,6 +16,7 @@ import (
 
 const helpSettingsID = "help-assistant"
 const maxHelpPromptChars = 16000
+const defaultHelpEffort = "low"
 const defaultHelpPrompt = "你是 Remote AI 的问题解答助手。使用用户的语言，结合提供的使用说明、当前设置和图片，" +
 	"用简洁、友好的步骤回答 Remote AI 相关问题。先给结论，再给操作建议；不确定时说明原因，并提出一个有帮助的问题。"
 
@@ -23,6 +24,7 @@ var helpModelPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$`
 
 type helpSettings struct {
 	Model        string `json:"model"`
+	Effort       string `json:"effort"`
 	SystemPrompt string `json:"systemPrompt"`
 	Revision     string `json:"revision"`
 }
@@ -41,11 +43,23 @@ func readHelpSettings(ctx context.Context, db *gorm.DB) (helpSettings, error) {
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		err = nil
 	}
+	if row.Policy.Effort == "" {
+		row.Policy.Effort = defaultHelpEffort
+	}
 	return row.Policy, err
 }
 
 func normalizeHelpSettings(input helpSettings) (helpSettings, error) {
 	input.Model, input.SystemPrompt = strings.TrimSpace(input.Model), strings.TrimSpace(input.SystemPrompt)
+	input.Effort = strings.TrimSpace(input.Effort)
+	if input.Effort == "" {
+		input.Effort = defaultHelpEffort
+	}
+	switch input.Effort {
+	case "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra":
+	default:
+		return input, platform.NewError(400, "请选择有效的推理强度。")
+	}
 	if !helpModelPattern.MatchString(input.Model) {
 		return input, platform.NewError(400, "请选择一个可用的官方模型。")
 	}
@@ -99,7 +113,7 @@ func (s *service) saveHelpSettings(
 		}
 		audit := &service{deps: &platform.Dependencies{DB: tx}}
 		return audit.record(actor, auditOptions{Action: "help-assistant.update", TargetID: helpSettingsID,
-			Metadata: object{"model": input.Model, "revision": input.Revision}})
+			Metadata: object{"model": input.Model, "effort": input.Effort, "revision": input.Revision}})
 	})
 	return input, err
 }

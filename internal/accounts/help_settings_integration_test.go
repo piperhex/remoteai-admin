@@ -1,11 +1,15 @@
 package accounts
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
 	"github.com/codex-switch/admin-go/internal/migrations"
 	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -48,11 +52,11 @@ func TestHelpSettingsPersistenceRevisionAndChatIsolation(t *testing.T) {
 	}
 	s := &service{deps: &platform.Dependencies{DB: tx}}
 	initial, err := readHelpSettings(t.Context(), tx)
-	if err != nil || initial.Model != "" || initial.SystemPrompt == "" {
+	if err != nil || initial.Model != "" || initial.SystemPrompt == "" || initial.Effort != defaultHelpEffort {
 		t.Fatal(initial, err)
 	}
 	actor := &platform.Principal{ID: owner, Email: owner + "@example.test"}
-	input := helpSettings{Model: "official-one", SystemPrompt: "Help politely"}
+	input := helpSettings{Model: "official-one", Effort: "high", SystemPrompt: "Help politely"}
 	saved, err := s.saveHelpSettings(t.Context(), input, actor)
 	if err != nil || saved.Revision == "" {
 		t.Fatal(saved, err)
@@ -65,11 +69,50 @@ func TestHelpSettingsPersistenceRevisionAndChatIsolation(t *testing.T) {
 		t.Fatal("stale update accepted")
 	}
 	saved.SystemPrompt = "Use short answers"
+	saved.Effort = "xhigh"
 	updated, err := s.saveHelpSettings(t.Context(), saved, actor)
-	if err != nil || updated.Revision == saved.Revision {
+	if err != nil || updated.Revision == saved.Revision || updated.Effort != "xhigh" {
 		t.Fatal(updated, err)
 	}
+	read, err = readHelpSettings(t.Context(), tx)
+	if err != nil || read != updated {
+		t.Fatal(read, updated, err)
+	}
+	checkPublicHelpEffort(t, s, "xhigh")
 	checkHelpSettingsIsolation(t, tx, owner)
+}
+
+func TestLegacyHelpSettingsDefaultToLow(t *testing.T) {
+	tx := helpSettingsTestDB(t)
+	legacy := `{"model":"official-one","systemPrompt":"Help politely","revision":"legacy"}`
+	row := helpSettingsRow{ID: helpSettingsID}
+	if err := tx.Where("id = ?", helpSettingsID).Delete(&row).Error; err != nil {
+		t.Fatal(err)
+	}
+	insert := "INSERT INTO chat_settings(id,policy) VALUES(?,?::jsonb)"
+	if err := tx.Exec(insert, helpSettingsID, legacy).Error; err != nil {
+		t.Fatal(err)
+	}
+	settings, err := readHelpSettings(t.Context(), tx)
+	if err != nil || settings.Effort != defaultHelpEffort || settings.Revision != "legacy" {
+		t.Fatal(settings, err)
+	}
+	checkPublicHelpEffort(t, &service{deps: &platform.Dependencies{DB: tx}}, defaultHelpEffort)
+}
+
+func checkPublicHelpEffort(t *testing.T, s *service, expected string) {
+	t.Helper()
+	router := gin.New()
+	s.registerHelpSettings(router)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/help-assistant/settings", nil))
+	var settings helpSettings
+	if recorder.Code != http.StatusOK || json.Unmarshal(recorder.Body.Bytes(), &settings) != nil {
+		t.Fatalf("public settings: %d %s", recorder.Code, recorder.Body.String())
+	}
+	if settings.Effort != expected {
+		t.Fatalf("public effort = %q, want %q", settings.Effort, expected)
+	}
 }
 
 func checkHelpSettingsIsolation(t *testing.T, tx *gorm.DB, owner string) {
