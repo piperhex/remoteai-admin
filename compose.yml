@@ -7,6 +7,9 @@ services:
     env_file: .env
     environment:
       CHAT_STUN_PORT: "${CHAT_STUN_PORT:-3478}"
+      UPDATE_CACHE_DIR: /var/lib/codex-switch/update-packages
+    volumes:
+      - update-packages:/var/lib/codex-switch/update-packages
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
@@ -20,6 +23,8 @@ services:
       kong:
         aliases:
           - "${ADMIN_GO_KONG_ALIAS:-codex-switch-admin-go}"
+volumes:
+  update-packages:
 networks:
   database:
     external: true

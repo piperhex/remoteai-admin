@@ -325,12 +325,16 @@ func sendChatPolicy(client *peer, policy map[string]interface{}) {
 }
 
 type Runtime struct {
-	stopPush func()
-	control  *ControlGateway
-	chat     *ChatGateway
+	stopPush        func()
+	stopUpdateCache func()
+	control         *ControlGateway
+	chat            *ChatGateway
 }
 
 func (runtime *Runtime) Close() error {
+	if runtime.stopUpdateCache != nil {
+		runtime.stopUpdateCache()
+	}
 	if runtime.stopPush != nil {
 		runtime.stopPush()
 	}

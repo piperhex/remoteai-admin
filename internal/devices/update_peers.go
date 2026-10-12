@@ -36,6 +36,7 @@ type updateTransfer struct {
 	expires              time.Time
 	protocol             int
 	seedKey, receiverKey string
+	artifact             string
 }
 
 // Only opaque artifact identifiers and short-lived connection grants cross accounts.
@@ -151,7 +152,7 @@ func (t *updatePeerTracker) find(client *peer, message platform.JSON, owner, key
 	}
 	unavailable := func() { client.send(platform.JSON{"type": "update-peer-unavailable", "requestId": request}, nil) }
 	if !validUpdateArtifact(artifact) || t.native == nil || len(t.transfers) >= maxUpdateTransfers ||
-		t.downloading(client) || time.Since(t.accountFind[key]) < updateFindInterval {
+		time.Since(t.accountFind[key]) < updateFindInterval {
 		unavailable()
 		return
 	}
@@ -160,6 +161,11 @@ func (t *updatePeerTracker) find(client *peer, message platform.JSON, owner, key
 	count := 1
 	if requested, ok := message["maxPeers"].(float64); ok && requested >= 2 {
 		count = maxUpdateDownloadPeers
+	}
+	capacity := t.refillCapacity(client, artifact, message)
+	if capacity == 0 {
+		unavailable()
+		return
 	}
 	seeds := t.selectSeeds(client, artifact, owner, count)
 	requestedProtocol, _ := message["packageProtocol"].(float64)
@@ -173,7 +179,7 @@ func (t *updatePeerTracker) find(client *peer, message platform.JSON, owner, key
 		}
 		selected = append(selected, seed)
 	}
-	seeds = selected[:min(count, len(selected))]
+	seeds = selected[:min(count, capacity, len(selected))]
 	if len(seeds) == 0 || len(t.transfers)+len(seeds) > maxUpdateTransfers {
 		unavailable()
 		return
@@ -217,7 +223,7 @@ func (t *updatePeerTracker) grant(seed, client *peer, request updateGrantRequest
 		protocol = 2
 	}
 	t.transfers[id] = updateTransfer{seed: seed, receiver: client, expires: expires,
-		protocol: protocol, seedKey: t.seeds[seed].key}
+		protocol: protocol, seedKey: t.seeds[seed].key, artifact: request.artifact}
 	grant := func(desktop bool) platform.JSON {
 		return platform.JSON{"sessionId": id, "secret": hex.EncodeToString(secret), "desktop": desktop,
 			"expiresAt": expires.UnixMilli(), "servers": t.native["servers"], "stunServers": t.native["stunServers"],
@@ -227,23 +233,33 @@ func (t *updatePeerTracker) grant(seed, client *peer, request updateGrantRequest
 	return grant(false)
 }
 
-func (t *updatePeerTracker) downloading(client *peer) bool {
+func (t *updatePeerTracker) refillCapacity(client *peer, artifact string, message platform.JSON) int {
+	capacity := maxUpdateDownloadPeers
+	refill, _ := message["refill"].(bool)
+	protocol, _ := message["packageProtocol"].(float64)
 	for _, transfer := range t.transfers {
 		if transfer.receiver == client {
-			return true
+			if !refill || protocol < 2 || transfer.protocol < 2 || transfer.artifact != artifact {
+				return 0
+			}
+			capacity--
 		}
 	}
-	return false
+	return max(0, capacity)
 }
 
 func (t *updatePeerTracker) selectSeeds(receiver *peer, artifact, owner string, count int) []*peer {
 	uploads := map[*peer]int{}
+	connected := map[*peer]bool{}
 	for _, transfer := range t.transfers {
 		uploads[transfer.seed]++
+		if transfer.receiver == receiver {
+			connected[transfer.seed] = true
+		}
 	}
 	var candidates []*peer
 	for client, seed := range t.seeds {
-		if client == receiver || client.closed.Load() || uploads[client] >= maxUpdateUploads ||
+		if client == receiver || connected[client] || client.closed.Load() || uploads[client] >= maxUpdateUploads ||
 			(count > 1 && !seed.ranges) || (seed.ownOnly && seed.owner != owner) {
 			continue
 		}

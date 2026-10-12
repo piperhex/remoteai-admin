@@ -25,6 +25,11 @@ type sharedUpdateLease struct {
 	ID             string
 	Seed, Receiver sharedUpdateSeed
 	Protocol       int
+	Artifact       string
+}
+
+func updatePairKey(lease sharedUpdateLease) string {
+	return updateRedisPrefix + "pair:" + lease.Receiver.Endpoint + ":" + updateIdentity(lease.Seed.Owner, lease.Seed.Device)
 }
 
 func updateIdentity(owner, device string) string {
@@ -48,12 +53,13 @@ var reserveUpdate = redis.NewScript(`
 local now, expiry = tonumber(ARGV[1]), tonumber(ARGV[2])
 for i=1,3 do redis.call('ZREMRANGEBYSCORE', KEYS[i], '-inf', now) end
 if redis.call('ZCARD', KEYS[1]) >= 2 or redis.call('ZCARD', KEYS[2]) >= 3 or
-   redis.call('ZCARD', KEYS[3]) >= 1024 then return 0 end
+   redis.call('ZCARD', KEYS[3]) >= 1024 or redis.call('EXISTS', KEYS[5]) == 1 then return 0 end
 for i=1,3 do
   redis.call('ZADD', KEYS[i], expiry, ARGV[3])
   redis.call('PEXPIRE', KEYS[i], ARGV[5])
 end
 redis.call('SET', KEYS[4], ARGV[4], 'PX', ARGV[5])
+redis.call('SET', KEYS[5], ARGV[3], 'PX', ARGV[5])
 return 1`)
 
 var releaseUpdate = redis.NewScript(`
@@ -63,6 +69,7 @@ local lease = cjson.decode(value)
 if lease.Seed.Endpoint ~= ARGV[1] and lease.Receiver.Endpoint ~= ARGV[1] then return '' end
 redis.call('DEL', KEYS[1])
 for i=2,4 do redis.call('ZREM', KEYS[i], lease.ID) end
+if redis.call('GET', KEYS[5]) == lease.ID then redis.call('DEL', KEYS[5]) end
 return value`)
 
 var removeUpdateSeed = redis.NewScript(`
@@ -84,7 +91,7 @@ func (c *updatePeerCluster) reserve(ctx context.Context, lease sharedUpdateLease
 	}
 	now := time.Now()
 	keys := []string{updateSeedSlots(lease.Seed), updateReceiverSlots(lease.Receiver.Endpoint),
-		updateRedisPrefix + "transfers", updateLeaseKey(lease.ID)}
+		updateRedisPrefix + "transfers", updateLeaseKey(lease.ID), updatePairKey(lease)}
 	result, err := reserveUpdate.Run(ctx, c.redis, keys, now.UnixMilli(),
 		now.Add(updateTransferLifetime).UnixMilli(), lease.ID, string(data), updateTransferLifetime.Milliseconds()).Int()
 	return err == nil && result == 1
@@ -100,7 +107,7 @@ func (c *updatePeerCluster) release(ctx context.Context, id, endpoint string) *s
 		return nil
 	}
 	keys := []string{updateLeaseKey(id), updateSeedSlots(lease.Seed),
-		updateReceiverSlots(lease.Receiver.Endpoint), updateRedisPrefix + "transfers"}
+		updateReceiverSlots(lease.Receiver.Endpoint), updateRedisPrefix + "transfers", updatePairKey(lease)}
 	value, err := releaseUpdate.Run(ctx, c.redis, keys, endpoint).Text()
 	if err != nil || value == "" {
 		return nil

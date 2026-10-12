@@ -197,7 +197,8 @@ func (c *updatePeerCluster) find(ctx context.Context, client *peer, receiver sha
 		unavailable()
 		return
 	}
-	if active, err := c.redis.ZCard(ctx, key).Result(); err != nil || active != 0 {
+	capacity := c.refillCapacity(ctx, key, artifact, message)
+	if capacity == 0 {
 		unavailable()
 		return
 	}
@@ -210,7 +211,7 @@ func (c *updatePeerCluster) find(ctx context.Context, client *peer, receiver sha
 		unavailable()
 		return
 	}
-	configs := c.match(ctx, seeds, receiver, matchUpdate{artifact: artifact, message: message, count: count})
+	configs := c.match(ctx, seeds, receiver, matchUpdate{artifact: artifact, message: message, count: min(count, capacity)})
 	if len(configs) == 0 {
 		unavailable()
 		return
@@ -248,7 +249,8 @@ func (c *updatePeerCluster) match(
 		if protocol >= 2 {
 			version = 2
 		}
-		lease := sharedUpdateLease{ID: "update-" + uuid.NewString(), Seed: seed, Receiver: receiver, Protocol: version}
+		lease := sharedUpdateLease{ID: "update-" + uuid.NewString(), Seed: seed, Receiver: receiver,
+			Protocol: version, Artifact: request.artifact}
 		if config := c.grant(ctx, lease, request.artifact); config != nil {
 			configs = append(configs, config)
 		}

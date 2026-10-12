@@ -136,3 +136,36 @@ func TestUpdateClusterOwnScopeRejectsOtherAccounts(t *testing.T) {
 		t.Fatal("shared across restricted accounts")
 	}
 }
+
+func TestUpdateClusterRefillNeverDuplicatesAnActiveSeedAcrossInstances(t *testing.T) {
+	a, b := clusterFixture(t)
+	ctx := context.Background()
+	owner := uuid.NewString()
+	artifact := updateIdentity(owner, "refill")
+	receiver := sharedUpdateSeed{Owner: owner, Device: "receiver", Endpoint: uuid.NewString()}
+	first := sharedUpdateSeed{Owner: owner, Device: "first", Endpoint: uuid.NewString(),
+		Artifacts: []string{artifact}, Protocol: 2, Ranges: true}
+	lease := sharedUpdateLease{ID: "update-" + uuid.NewString(), Seed: first, Receiver: receiver, Protocol: 2, Artifact: artifact}
+	if !a.reserve(ctx, lease) {
+		t.Fatal("initial reservation rejected")
+	}
+	duplicate := lease
+	duplicate.ID = "update-" + uuid.NewString()
+	if b.reserve(ctx, duplicate) {
+		t.Fatal("same receiver and seed reserved twice")
+	}
+	message := platform.JSON{"refill": true, "packageProtocol": float64(2)}
+	key := updateReceiverSlots(receiver.Endpoint)
+	if b.refillCapacity(ctx, key, artifact, message) != 2 {
+		t.Fatal("healthy grant prevented refill")
+	}
+	if b.refillCapacity(ctx, key, updateIdentity(owner, "other"), message) != 0 {
+		t.Fatal("refill changed the active package")
+	}
+	if b.refillCapacity(ctx, key, artifact, platform.JSON{}) != 0 {
+		t.Fatal("legacy find bypassed active download guard")
+	}
+	if b.release(ctx, lease.ID, receiver.Endpoint) == nil || !b.reserve(ctx, duplicate) {
+		t.Fatal("completed reservation did not release its pair slot")
+	}
+}

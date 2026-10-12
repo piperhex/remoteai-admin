@@ -6,6 +6,7 @@ import (
 
 	"github.com/codex-switch/admin-go/internal/chatpush"
 	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/codex-switch/admin-go/internal/updatecache"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -40,6 +41,7 @@ func Register(router *gin.Engine, deps *platform.Dependencies) (*Runtime, error)
 		}
 	}
 	runtime.stopPush = chatpush.Register(router, deps)
+	runtime.stopUpdateCache = updatecache.Register(router, deps.Config)
 	router.GET("/device-switch", gateway.serve)
 	router.GET("/device-chat", chat.serve)
 	chat.registerAssistance(router)

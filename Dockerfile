@@ -23,7 +23,8 @@ FROM build AS verify
 RUN apk add --no-cache gcc musl-dev redis
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     redis-server --bind 127.0.0.1 --port 16389 --save '' --appendonly no --daemonize yes && \
-    TELEMETRY_TEST_REDIS=127.0.0.1:16389 CGO_ENABLED=1 go test -race ./... && go vet ./...
+    TELEMETRY_TEST_REDIS=127.0.0.1:16389 UPDATE_PEER_TEST_REDIS=127.0.0.1:16389 \
+    CGO_ENABLED=1 go test -race ./... && go vet ./...
 
 FROM scratch AS runtime
 WORKDIR /app
