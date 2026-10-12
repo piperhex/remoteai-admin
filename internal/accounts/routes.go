@@ -12,6 +12,7 @@ func Register(router *gin.Engine, deps *platform.Dependencies) error {
 	}
 	s := &service{deps: deps}
 	s.registerModelCatalog(router)
+	s.registerHelpSettings(router)
 	sync := router.Group("/sync", deps.RequireAuth())
 	s.registerSync(sync)
 	s.registerOfficialUsage(router.Group("/official-usage", deps.RequireAuth()),
