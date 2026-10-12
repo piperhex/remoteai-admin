@@ -23,10 +23,11 @@ const defaultHelpPrompt = "你是 Remote AI 的问题解答助手。使用用户
 var helpModelPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$`)
 
 type helpSettings struct {
-	Model        string `json:"model"`
-	Effort       string `json:"effort"`
-	SystemPrompt string `json:"systemPrompt"`
-	Revision     string `json:"revision"`
+	Model        string         `json:"model"`
+	Effort       string         `json:"effort"`
+	SystemPrompt string         `json:"systemPrompt"`
+	Revision     string         `json:"revision"`
+	Questions    []helpQuestion `json:"questions"`
 }
 
 type helpSettingsRow struct {
@@ -45,6 +46,9 @@ func readHelpSettings(ctx context.Context, db *gorm.DB) (helpSettings, error) {
 	}
 	if row.Policy.Effort == "" {
 		row.Policy.Effort = defaultHelpEffort
+	}
+	if row.Policy.Questions == nil {
+		row.Policy.Questions = defaultHelpQuestions()
 	}
 	return row.Policy, err
 }
@@ -69,7 +73,9 @@ func normalizeHelpSettings(input helpSettings) (helpSettings, error) {
 	if len(input.Revision) > 128 {
 		return input, platform.NewError(400, "请重新加载助手设置后再保存。")
 	}
-	return input, nil
+	questions, err := normalizeHelpQuestions(input.Questions)
+	input.Questions = questions
+	return input, err
 }
 
 func validateHelpModel(model string, raw json.RawMessage) error {
@@ -106,6 +112,13 @@ func (s *service) saveHelpSettings(
 		}
 		if row.Policy.Revision != previous {
 			return platform.NewError(409, "助手设置已更新，请重新加载后再保存。")
+		}
+		// Older admin clients omit questions; keep the saved list when they update other settings.
+		if input.Questions == nil {
+			input.Questions = row.Policy.Questions
+			if input.Questions == nil {
+				input.Questions = defaultHelpQuestions()
+			}
 		}
 		row.Policy = input
 		if err := tx.Save(&row).Error; err != nil {

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/codex-switch/admin-go/internal/migrations"
@@ -62,7 +63,7 @@ func TestHelpSettingsPersistenceRevisionAndChatIsolation(t *testing.T) {
 		t.Fatal(saved, err)
 	}
 	read, err := readHelpSettings(t.Context(), tx)
-	if err != nil || read != saved {
+	if err != nil || !reflect.DeepEqual(read, saved) {
 		t.Fatal(read, saved, err)
 	}
 	if _, err = s.saveHelpSettings(t.Context(), helpSettings{Model: "stale", SystemPrompt: "Wrong"}, actor); err == nil {
@@ -70,12 +71,13 @@ func TestHelpSettingsPersistenceRevisionAndChatIsolation(t *testing.T) {
 	}
 	saved.SystemPrompt = "Use short answers"
 	saved.Effort = "xhigh"
+	saved.Questions = []helpQuestion{{Zh: "帮我检查设置", En: "Check my settings"}, {Zh: "如何开启电脑助手？"}}
 	updated, err := s.saveHelpSettings(t.Context(), saved, actor)
 	if err != nil || updated.Revision == saved.Revision || updated.Effort != "xhigh" {
 		t.Fatal(updated, err)
 	}
 	read, err = readHelpSettings(t.Context(), tx)
-	if err != nil || read != updated {
+	if err != nil || !reflect.DeepEqual(read, updated) {
 		t.Fatal(read, updated, err)
 	}
 	checkPublicHelpEffort(t, s, "xhigh")
@@ -96,6 +98,9 @@ func TestLegacyHelpSettingsDefaultToLow(t *testing.T) {
 	settings, err := readHelpSettings(t.Context(), tx)
 	if err != nil || settings.Effort != defaultHelpEffort || settings.Revision != "legacy" {
 		t.Fatal(settings, err)
+	}
+	if !reflect.DeepEqual(settings.Questions, defaultHelpQuestions()) {
+		t.Fatalf("legacy suggestions were not preserved: %#v", settings.Questions)
 	}
 	checkPublicHelpEffort(t, &service{deps: &platform.Dependencies{DB: tx}}, defaultHelpEffort)
 }
