@@ -15,20 +15,22 @@ const MaxModels = 1000
 const maxRate = 1_000_000_000
 const maxMultiplier = 100
 const maxAliases = 20
+const MaxLongContextThresholdTokens = 1_000_000_000
 
 //go:embed defaults.json
 var defaultsJSON []byte
 
 // Model contains USD prices per million tokens and the Fast mode cost multiplier.
 type Model struct {
-	Model              string   `json:"model"`
-	Aliases            []string `json:"aliases,omitempty"`
-	Input              *float64 `json:"input"`
-	CachedInput        *float64 `json:"cachedInput"`
-	Output             *float64 `json:"output"`
-	LongContextPricing bool     `json:"longContextPricing"`
-	FastModeMultiplier *float64 `json:"fastModeMultiplier"`
-	SourceURL          string   `json:"sourceUrl"`
+	Model                      string   `json:"model"`
+	Aliases                    []string `json:"aliases,omitempty"`
+	Input                      *float64 `json:"input"`
+	CachedInput                *float64 `json:"cachedInput"`
+	Output                     *float64 `json:"output"`
+	LongContextPricing         bool     `json:"longContextPricing"`
+	LongContextThresholdTokens *uint64  `json:"longContextThresholdTokens,omitempty"`
+	FastModeMultiplier         *float64 `json:"fastModeMultiplier"`
+	SourceURL                  string   `json:"sourceUrl"`
 }
 
 // Document is the public pricing payload. It contains no account or provider credentials.
@@ -65,6 +67,8 @@ func validModel(model Model) bool {
 	return validName(model.Model) && len(model.Aliases) <= maxAliases && validSource(model.SourceURL) &&
 		validRate(model.Input, maxRate, false) && validRate(model.CachedInput, maxRate, false) &&
 		validRate(model.Output, maxRate, false) &&
+		(model.LongContextThresholdTokens == nil || (*model.LongContextThresholdTokens > 0 &&
+			*model.LongContextThresholdTokens <= MaxLongContextThresholdTokens)) &&
 		(model.FastModeMultiplier == nil || validRate(model.FastModeMultiplier, maxMultiplier, true))
 }
 
@@ -77,7 +81,7 @@ func (document Document) Validate() error {
 	names := map[string]bool{}
 	for _, model := range document.Models {
 		if !validModel(model) {
-			return errors.New("请填写有效的模型名称、价格和快速模式倍率。")
+			return errors.New("请检查模型名称、价格、长上下文计费起点和快速模式倍率。")
 		}
 		for _, name := range append([]string{model.Model}, model.Aliases...) {
 			if !validName(name) || names[name] {
