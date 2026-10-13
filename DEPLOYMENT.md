@@ -321,17 +321,29 @@ PC 发起端和被控端都需要带 TCP 协商的版本；仅更新被控端不
 `ADMIN_GO_IMAGE` 可指定提交 tag；未设置时沿用 `codex-switch/admin-go:local`。
 如沿用原镜像引用，将已验证的新镜像 ID 标记到该引用；保留单独的回滚 tag。
 
-使用实际观察到的项目名。以下为默认项目的 Bash 示例，自动带上已有 Go 覆盖文件：
+更新和回滚统一使用下面的入口（需要 Python 3 和 Docker Compose）。使用实际观察到的项目名：
 
 ```bash
 set -Eeuo pipefail
-go_compose=(docker compose --project-name admin-go --env-file apps/admin-go/.env -f apps/admin-go/compose.yml)
-if test -f apps/admin-go/compose.override.yml; then
-  go_compose+=(-f apps/admin-go/compose.override.yml)
-fi
-"${go_compose[@]}" config --quiet
-"${go_compose[@]}" up -d --no-deps --no-build --pull never admin-go
+python3 -B apps/admin-go/scripts/deployment_compose.py check --project-name admin-go
+python3 -B apps/admin-go/scripts/deployment_compose.py up --project-name admin-go
+python3 -B apps/admin-go/scripts/deployment_compose.py verify --project-name admin-go
 ```
+
+入口从当前容器的 Compose 标签保留完整文件列表和顺序，包括私有覆盖文件及其他可选服务配置。
+新安装默认加载 `compose.yml` 和已存在的 `compose.override.yml`。目标配置或当前服务启用了
+`DESKTOP_TURN_URLS` 时，自动补上 `compose.desktop-relay.yml`；未启用的环境不会自动开启中继。
+额外覆盖文件用 `--file 路径` 追加；`--env-file 路径` 指定 Compose 变量替换文件，
+服务自身的 `env_file` 路径仍由 Compose 配置决定，使用其他文件时需在覆盖配置中同步设置。
+
+`check` 只读检查，不打印展开的环境变量。缺失已使用的配置文件、意外关闭已启用的中继、
+缺少已公布的 UDP/TCP/TLS 端口映射、映射仅绑定回环地址、中继网络断开或暴露私有 TURN 认证端口，
+都会阻止 `up`。`up` 只执行 `admin-go` 的 `--no-deps --no-build --pull never` 更新，随后检查实际容器；
+它不会创建或启动 TURN 后端，新装中继仍按 [DESKTOP-RELAY.md](DESKTOP-RELAY.md) 单独准备。
+`verify` 核对实际运行状态、端口和共享网络；公网连通性和真实视频连接仍需完成下文的验收。
+
+本地回归检查：`python -B -m unittest discover -s apps/admin-go/scripts -p 'test_deployment_*.py' -v`。
+设置 `COMPOSE_CONFIG_TEST=1` 会额外使用临时配置验证真实 Compose 合并，无需启动容器或访问生产。
 
 不要在加载本地镜像后重新构建，不运行整栈 `down` 或 `--remove-orphans`。
 更新 Go 不需要重启 PostgreSQL、Redis、Kong 或 Web。数据库和 Redis 的 ID/启动时间应保持不变。
@@ -350,9 +362,15 @@ DB-backed Kong 通过已确认的 Admin API 管理；声明式 Kong 应持久化
 
 `/auth`、`/admin` 等公开路径和受保护的 `/sync`、`/devices`、`/admin/api` 都指向同一 Go 进程。
 公开路由还需包含 `/token-cost-presets`，供 PC 启动时读取计价预设；保持 `strip_path=false`。
+`/help-assistant/settings` 也属于公共路由，供客户端读取帮助助手设置。
 `/device-switch`、`/device-chat` 必须保留 WebSocket Upgrade；首帧在 Go 内校验 JWT。
 JWT 插件使用 `key_claim_name=iss`、`claims_to_verify=exp`、`run_on_preflight=false`。
 `/web` 指向独立 Web 服务并启用 `strip_path=true`。
+
+新增接口时同步维护示例配置，避免仅在线上添加路由。运行
+`go -C apps/admin-go test ./internal/server -run TestKong -count=1`，
+将 Go 实际注册的全部接口与示例逐一对照，同时检查上游、路径保留和主要鉴权边界。
+此项检查已包含在 Go 测试和部署配置 CI 中；部署时仍需核对线上配置与示例的差异。
 
 Kong 的 worker 配置和 DNS 缓存可能晚于修改生效。重建容器后应核对新 IP，并在限定时间内
 重复公网检查；不能仅凭 Admin API 返回成功判断流量已切换。若需更换别名，应先在持久化
@@ -372,7 +390,7 @@ Go 为兼容旧接口保留了 `X-Powered-By: Express`，该响应头不能判�
 - 验证数据库、Redis 未被重建或重启；删除临时测试账号并保存部署记录。
 
 出现确认的更新故障时，恢复已记录的上一版 admin-go 镜像及其兼容配置，使用同一 Compose
-项目和文件执行 `up -d --no-deps --no-build --pull never --force-recreate admin-go`，
+项目和文件执行 `python3 -B apps/admin-go/scripts/deployment_compose.py up --project-name admin-go --force-recreate`，
 再执行相同验收。回滚只使用 Go 镜像，不启动 NestJS；不自动恢复数据库备份覆盖在线数据。
 首次迁移在旧服务停止前完成并行验证；缺少已验证的 Go 回滚镜像时应在切换前解决这一条件。
 

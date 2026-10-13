@@ -27,6 +27,7 @@ services:
           - /currency-rates
           - /token-cost-presets
           - /official-models
+          - /help-assistant/settings
           - /update-packages
           - /telemetry
           - /device-switch

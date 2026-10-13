@@ -31,6 +31,8 @@ node apps/admin-go/scripts/extract-contract.mjs --check
 管理端和 Web 镜像构建均不再读取 `apps/admin` 源码。
 
 - `compose.yml`：连接现有 PostgreSQL、Redis 和 Kong 的 Go 服务；正常更新只重建 `admin-go`。
+- `scripts/deployment_compose.py`：统一更新、回滚和检查入口，保留已有配置并核对中继端口。
+- `compose.desktop-relay.yml`：远程桌面 TURN 中继；启用后的每次更新都必须保留。
 - `compose.infrastructure.yml`：新安装时可选的 PostgreSQL、Redis，已有环境沿用原数据容器。
 - `../web/compose.yml`：独立 Web 容器，按需更新。
 - `kong/existing-kong.example.yml`：指向 Go 的网关示例。

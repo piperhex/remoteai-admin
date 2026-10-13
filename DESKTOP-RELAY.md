@@ -9,6 +9,11 @@
 后续更新与回滚必须保留这个文件，避免误删端口和网络配置。先备份环境文件与当前 Go 镜像。
 保持 PostgreSQL、Redis、Kong 和原有配置不变；无需新增数据库表，沿用现有中继额度和结算表。
 
+日常更新与回滚使用 [统一部署入口](DEPLOYMENT.md#加载并更新-go)：
+`python3 -B apps/admin-go/scripts/deployment_compose.py up --project-name admin-go`。
+它自动保留当前配置并补上已启用的中继文件；重建前检查已公布的中继端口，重建后检查实际端口和网络。
+不要改用仅带基础文件的 `docker compose up`，也不要用 HTTP 或聊天 STUN 成功代替 TURN 验收。
+
 在私有 `.env` 中配置以下变量（示例域名和地址必须替换）：
 
 ```dotenv
