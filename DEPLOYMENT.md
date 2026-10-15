@@ -17,6 +17,11 @@
 本次复用原有 Provider 同步接口和 Kong 鉴权规则，无新增路由。回滚使用已验证的 admin-go 镜像，
 保留新增列及数据，不执行删除列操作。
 
+若上传返回 `fieldModifiedAt.property requestOptions should not exist`，说明服务端入口校验尚未支持新字段。
+必须部署包含 Go Provider 同步契约扩展的镜像；仅执行数据库脚本不能解决此 400。
+即使没有配置高级设置，新客户端也会上传该字段的修改时间。部署后验证单条和批量上传，
+覆盖未配置、已配置和清空设置，并运行 `go -C apps/admin-go test ./internal/platform -run TestProviderSyncContract`。
+
 ## 官方模型列表缓存
 
 Go 服务默认在启动后预取官方模型列表到 Redis，并每 30 分钟刷新一次。管理页面可关闭自动更新，

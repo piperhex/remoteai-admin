@@ -54,6 +54,7 @@ func LoadContract() (*Contract, error) {
 	if err := json.Unmarshal(contractJSON, &contract); err != nil {
 		return nil, err
 	}
+	contract.extendProviderSyncContract()
 	return &contract, nil
 }
 
