@@ -50,6 +50,7 @@ type provider struct {
 
 	FastModeEnabled   bool       `gorm:"column:fastModeEnabled"                 json:"fastModeEnabled"`
 	APIFormat         string     `gorm:"column:apiFormat"                       json:"apiFormat"`
+	RequestOptions    object     `gorm:"column:requestOptions;serializer:json"  json:"requestOptions"`
 	BalancePlatform   *string    `gorm:"column:balancePlatform"                 json:"balancePlatform"`
 	BalanceQueryURL   *string    `gorm:"column:balanceQueryUrl"                 json:"balanceQueryUrl"`
 	BalanceQueryToken *string    `gorm:"column:balanceQueryToken"               json:"balanceQueryToken"`

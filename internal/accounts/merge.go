@@ -20,7 +20,7 @@ var accountFields = []string{
 var providerFields = []string{"kind", "name", "group", "baseUrl", "apiKey", "model", "models", "modelReasoningEfforts",
 	"modelContextWindows", "modelApiFormats", "imageInputModels", "contextWindow", "modelSelectionControlledByCodex",
 	"fastModeEnabled", "apiFormat", "balancePlatform", "balanceQueryUrl", "balanceQueryToken", "walletQueryUrl",
-	"walletQueryToken", "walletUsername", "walletPassword"}
+	"walletQueryToken", "walletUsername", "walletPassword", "requestOptions"}
 
 func accountDTO(row account) object {
 	result := object{
@@ -181,7 +181,7 @@ func normalizeModels(key string, configured object, models []string) object {
 				result[model] = n
 			}
 		case "modelApiFormats":
-			if value == "openaiResponses" || value == "openaiChat" {
+			if value == "openaiResponses" || value == "openaiChat" || value == "anthropicMessages" {
 				result[model] = value
 			}
 		}
@@ -201,6 +201,9 @@ func mergeProvider(existing *provider, owner string, incoming object) (*provider
 	if existing != nil && existing.DeletedAt != nil {
 		return nil, nil
 	}
+	if err := validateProviderRequestOptions(incoming["requestOptions"]); err != nil {
+		return nil, err
+	}
 	values := providerValues(incoming)
 	incomingVersions := versions(obj(incoming["fieldModifiedAt"]), incoming["lastModifiedAt"], providerFields)
 	values["id"] = newID()
@@ -215,6 +218,9 @@ func mergeProvider(existing *provider, owner string, incoming object) (*provider
 		oldVersions := versions(existing.FieldModifiedAt, iso(existing.LastModifiedAt), providerFields)
 		changed := false
 		for _, key := range providerFields {
+			if key == "requestOptions" && incoming[key] == nil {
+				continue
+			}
 			if newer(incomingVersions[key], oldVersions[key]) {
 				old[key] = values[key]
 				oldVersions[key] = incomingVersions[key]
