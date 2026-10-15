@@ -49,6 +49,7 @@ func Register(router *gin.Engine, deps *platform.Dependencies) (*Runtime, error)
 	chat.registerAssistance(router)
 	router.POST("/desktop-service/revoke", gateway.selfRevokeServiceCredential)
 	group := router.Group("/devices", deps.RequireAuth())
+	service.registerPortMappings(group)
 	group.GET("", func(c *gin.Context) {
 		devices, err := gateway.statuses(platform.User(c).ID)
 		platform.Respond(c, gin.H{"devices": devices}, err)
