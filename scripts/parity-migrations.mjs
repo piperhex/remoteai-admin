@@ -18,7 +18,7 @@ const goOnlyTables = ['token_cost_preset_settings', 'user_login_locks', 'chat_re
   'chat_push_subscriptions', 'chat_push_deliveries', 'desktop_service_credentials',
   'official_usage_v2_devices', 'official_usage_v2_accounts', 'official_usage_v2_minutes',
   'official_quota_v2_observations', 'official_quota_v2_declines',
-  'synced_aggregates', 'update_sharing_settings'];
+  'synced_aggregates', 'update_sharing_settings', 'device_port_mappings'];
 
 function docker(...args) {
   return execFileSync('docker', args, { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim();
@@ -121,6 +121,34 @@ async function checkUsageMigration(postgres) {
   }
 }
 
+async function checkPortMappingMigration(postgres) {
+  const client = await database('admin_go');
+  const baseline = schema(postgres, 'admin_go');
+  const migration = readFileSync(new URL('../sql/20261015-port-mappings.sql', import.meta.url), 'utf8');
+  const embedded = readFileSync(new URL('../internal/migrations/015_port_mappings.sql', import.meta.url), 'utf8');
+  assert.equal(migration, embedded, 'new and upgraded installations must use the same port mapping schema');
+  try {
+    await client.query('BEGIN');
+    const owner = (await client.query('SELECT id FROM users ORDER BY id LIMIT 1')).rows[0].id;
+    const device = 'cc22cc22-0000-4000-8000-000000000001';
+    await client.query(`INSERT INTO remote_devices("ownerId","deviceId",name,platform)
+      VALUES($1,$2,'Port mapping migration fixture','Windows')`, [owner, device]);
+    const mappings = [{ id: 'migration-sentinel', remoteHost: '127.0.0.1', remotePort: 3000, localPort: 13000 }];
+    await client.query(`INSERT INTO device_port_mappings("ownerId","deviceId",revision,mappings)
+      VALUES($1,$2,7,$3)`, [owner, device, JSON.stringify(mappings)]);
+    await client.query(migration);
+    await client.query(migration);
+    const saved = await client.query(`SELECT revision::int,mappings FROM device_port_mappings
+      WHERE "ownerId"=$1 AND "deviceId"=$2`, [owner, device]);
+    assert.deepEqual(saved.rows, [{ revision: 7, mappings }], 'migration reruns must preserve saved mappings');
+  } finally {
+    await client.query('ROLLBACK');
+    await client.end();
+  }
+  assert.equal(schema(postgres, 'admin_go'), baseline, 'port mapping migration reruns must preserve schema');
+  console.log('PASS port mapping upgrade matches bootstrap and preserves existing mappings on rerun');
+}
+
 export async function runMigrations() {
   const postgres = serviceContainer('postgres');
   const config = JSON.parse(docker('inspect', serviceContainer('admin-go')))[0];
@@ -130,6 +158,7 @@ export async function runMigrations() {
   assert.equal(schema(postgres, 'admin_go', true), original, 'existing Go database must retain every legacy schema object');
   console.log('PASS existing PostgreSQL columns, defaults, indexes and constraints match');
   await checkUsageMigration(postgres);
+  await checkPortMappingMigration(postgres);
   await stopBootstrap();
   const admin = await database('legacy');
   try {
@@ -178,6 +207,7 @@ export async function runMigrations() {
   }
   return [{ label: 'existing schema unchanged' }, { label: 'empty schema initialization' },
     { label: 'usage v2 upgrade retains legacy data without importing it' },
+    { label: 'port mapping upgrade preserves saved mappings on rerun' },
     { label: 'idempotent initialization and data preservation' }];
 }
 
