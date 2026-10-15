@@ -28,6 +28,7 @@ func catalog() permissionCatalog {
 	if err := json.Unmarshal(catalogJSON, &result); err != nil {
 		panic(err)
 	}
+	addUpdateSharingPermissions(&result)
 	return result
 }
 

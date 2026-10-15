@@ -99,14 +99,15 @@ func TestKongRoutesCoverRegisteredGoEndpoints(t *testing.T) {
 func TestKongRouteAuthenticationBoundaries(t *testing.T) {
 	services := readKongServices(t)
 	for _, path := range []string{"/sync/accounts", "/admin/api/users", "/devices", "/official-usage",
-		"/remote-assistance", "/chat-push/status"} {
+		"/remote-assistance", "/chat-push/status", "/admin/api/update-sharing"} {
 		_, route := matchKongRoute(services, path)
 		if !hasKongAccountJWT(route) {
 			t.Errorf("%s must use the account JWT route with expiry verification", path)
 		}
 	}
 	for _, path := range []string{"/auth/login", "/device-chat", "/device-switch", "/desktop-service/revoke",
-		"/help-assistant/settings", "/official-models", "/update-packages", "/admin-assets/app.js"} {
+		"/help-assistant/settings", "/official-models", "/update-packages", "/update-sharing/settings",
+		"/admin-assets/app.js"} {
 		service, route := matchKongRoute(services, path)
 		if service.URL != kongGoUpstream || stripsKongPath(route) || len(route.Plugins) != 0 {
 			t.Errorf("%s must reach Go unchanged without the account JWT plugin", path)

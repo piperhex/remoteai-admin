@@ -29,6 +29,7 @@ services:
           - /official-models
           - /help-assistant/settings
           - /update-packages
+          - /update-sharing/settings
           - /telemetry
           - /device-switch
           - /device-chat

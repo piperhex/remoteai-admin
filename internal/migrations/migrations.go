@@ -41,6 +41,9 @@ var officialUsageSchema string
 //go:embed 012_provider_request_options.sql
 var providerRequestOptionsSchema string
 
+//go:embed 014_update_sharing.sql
+var updateSharingSchema string
+
 // InitializeEmpty never changes existing tables, constraints, indexes, or customer data.
 // Existing deployments continue to apply the versioned apps/admin-go/sql migrations.
 func InitializeEmpty(db *gorm.DB) error {
@@ -87,6 +90,9 @@ func InitializeEmpty(db *gorm.DB) error {
 		if err := tx.Exec(officialUsageSchema).Error; err != nil {
 			return err
 		}
-		return tx.Exec(providerRequestOptionsSchema).Error
+		if err := tx.Exec(providerRequestOptionsSchema).Error; err != nil {
+			return err
+		}
+		return tx.Exec(updateSharingSchema).Error
 	})
 }

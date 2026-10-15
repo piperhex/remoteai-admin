@@ -63,6 +63,9 @@ func newUpdatePeerTracker(service *Service) *updatePeerTracker {
 }
 
 func (g *ControlGateway) receiveUpdatePeer(client *peer, session controlSession, message platform.JSON) {
+	if !g.applyUpdateSharingPolicy(client, message) {
+		return
+	}
 	g.mu.Lock()
 	device := session.kind == "device" && g.sockets[session.owner+":"+session.device] == client
 	mobile := session.kind == "subscriber" && !session.expires.IsZero() && time.Now().Before(session.expires)
