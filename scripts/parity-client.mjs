@@ -12,10 +12,11 @@ const sides = ['legacy', 'modern'];
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isoPattern = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/;
 const sensitiveRuntimeKeys = new Set(['accessToken', 'refreshToken', 'passwordHash']);
-// Go-only permissions are exercised by token-pricing-smoke.mjs and chat-traffic-smoke.mjs.
+// Go-only permissions are exercised by their smoke tests and Go authorization tests.
 const goOnlyPermissions = new Set([
   'admin.token-pricing.read', 'admin.token-pricing.manage',
   'admin.chat-traffic.read', 'admin.chat-traffic.manage',
+  'admin.update-sharing.read', 'admin.update-sharing.manage',
 ]);
 // The chat policy/limit smoke tests cover these additions; compare only the frozen Nest contract here.
 const goOnlyChatFields = new Set([
@@ -29,6 +30,19 @@ function legacyDeviceField(value, field) {
   if (!('deviceId' in value) || !goOnlyDeviceFields.has(field)) return true;
   // Frozen desktops cannot select a GUI model; the additive fields must stay empty.
   assert.equal(value[field], null, `legacy device must not acquire ${field}`);
+  return false;
+}
+
+function legacyProviderField(value, field, parent) {
+  if (field !== 'requestOptions') return true;
+  if (parent === 'fieldModifiedAt') {
+    assert.match(value[field], isoPattern, 'provider options version must be an ISO timestamp');
+    return false;
+  }
+  if (!('modelApiFormats' in value)) return true;
+  // Old clients never send advanced options; dedicated Go tests cover their persisted values.
+  assert.ok(value[field] === null || Object.keys(value[field]).length === 0,
+    'legacy provider must not acquire request options');
   return false;
 }
 
@@ -88,7 +102,8 @@ function normalized(value, context, key = '') {
       assert.equal(value.fileBulkEnabled, 0, 'legacy settings must keep bulk downloads disabled');
     }
     const fields = Object.keys(value).filter((field) => !(goOnlyChatFields.has(field) && 'threadPageSize' in value)
-      && !(legacyPolicy && ['binaryRelay', 'fileBulkV1'].includes(field)) && legacyDeviceField(value, field));
+      && !(legacyPolicy && ['binaryRelay', 'fileBulkV1'].includes(field)) && legacyDeviceField(value, field)
+      && legacyProviderField(value, field, key));
     return Object.fromEntries(fields.sort().map((field) => [field, normalized(value[field], context, field)]));
   }
   return value;

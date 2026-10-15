@@ -17,7 +17,8 @@ const goOnlyTables = ['token_cost_preset_settings', 'user_login_locks', 'chat_re
   'chat_relay_user_months', 'chat_relay_user_hours', 'chat_relay_budgets', 'chat_relay_bulk_leases',
   'chat_push_subscriptions', 'chat_push_deliveries', 'desktop_service_credentials',
   'official_usage_v2_devices', 'official_usage_v2_accounts', 'official_usage_v2_minutes',
-  'official_quota_v2_observations', 'official_quota_v2_declines'];
+  'official_quota_v2_observations', 'official_quota_v2_declines',
+  'synced_aggregates', 'update_sharing_settings'];
 
 function docker(...args) {
   return execFileSync('docker', args, { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim();
@@ -37,8 +38,9 @@ function schema(postgres, database, legacyOnly = false, excludedTables = []) {
     ...excluded.map((table) => `--exclude-table=public.${table}`))
     .split('\n').filter((line) => !line.startsWith('\\restrict ') && !line.startsWith('\\unrestrict '))
     .join('\n');
-  // GUI columns are asserted separately; the frozen Nest schema cannot contain them.
+  // Additive columns are asserted separately; the frozen Nest schema cannot contain them.
   return legacyOnly ? dump.replace(/^    "gui(?:Account|Provider)Id" character varying\(120\),?\n/gm, '')
+    .replace(/^    "requestOptions" jsonb,?\n/gm, '')
     .replace(/,\n\);/g, '\n);') : dump;
 }
 
@@ -51,6 +53,16 @@ async function checkGuiColumns(name) {
     assert.deepEqual(columns.rows, ['guiAccountId', 'guiProviderId'].map((column_name) => ({
       column_name, data_type: 'character varying', character_maximum_length: 120, is_nullable: 'YES',
     })));
+  } finally { await client.end(); }
+}
+
+async function checkProviderOptionsColumn(name) {
+  const client = await database(name);
+  try {
+    const columns = await client.query(`SELECT column_name, data_type, is_nullable
+      FROM information_schema.columns WHERE table_schema='public' AND table_name='synced_providers'
+      AND column_name='requestOptions'`);
+    assert.deepEqual(columns.rows, [{ column_name: 'requestOptions', data_type: 'jsonb', is_nullable: 'YES' }]);
   } finally { await client.end(); }
 }
 
@@ -114,6 +126,7 @@ export async function runMigrations() {
   const config = JSON.parse(docker('inspect', serviceContainer('admin-go')))[0];
   const original = schema(postgres, 'legacy');
   await checkGuiColumns('admin_go');
+  await checkProviderOptionsColumn('admin_go');
   assert.equal(schema(postgres, 'admin_go', true), original, 'existing Go database must retain every legacy schema object');
   console.log('PASS existing PostgreSQL columns, defaults, indexes and constraints match');
   await checkUsageMigration(postgres);
@@ -125,6 +138,7 @@ export async function runMigrations() {
     await admin.query(`CREATE DATABASE ${bootstrapDatabase}`);
     await startBootstrap(config);
     await checkGuiColumns(bootstrapDatabase);
+    await checkProviderOptionsColumn(bootstrapDatabase);
     assert.equal(schema(postgres, bootstrapDatabase, true), original, 'empty-database initialization must reproduce legacy schema');
     console.log('PASS empty database initialized with the complete legacy schema');
     const fresh = await database(bootstrapDatabase);
