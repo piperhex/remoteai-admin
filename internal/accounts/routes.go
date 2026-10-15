@@ -73,6 +73,7 @@ func (s *service) registerSync(r *gin.RouterGroup) {
 	)
 	s.registerTotp(r, read, write)
 	s.registerProviders(r)
+	s.registerAggregates(r)
 	s.registerAccountNetwork(r, read, write)
 }
 

@@ -142,6 +142,8 @@ func normalizeCapabilities(value interface{}) []string {
 
 func supportedCapability(name string) bool {
 	switch name {
+	case "aggregate-switch", "gui-aggregate-switch":
+		return true
 	case "provider-switch", "provider-group-switch", "restart-codex", "gui-model-switch", "app-update", "remote-command":
 		return true
 	default:
@@ -170,11 +172,18 @@ func (s *Service) providers(owner string) ([]platform.JSON, error) {
 	return result, err
 }
 
+func (s *Service) aggregates(owner string) ([]platform.JSON, error) {
+	return accounts.AggregateSummaries(s.deps, owner)
+}
+
 func (s *Service) available(owner, kind, id string) error {
 	var items []map[string]interface{}
 	var err error
 	if kind == "account" {
 		items, err = accounts.EffectiveAccounts(s.deps, owner)
+	} else if kind == "aggregate" {
+		items, err = s.aggregates(owner)
+		id = "aggregate:" + id
 	} else {
 		items, err = s.providers(owner)
 	}
@@ -184,6 +193,9 @@ func (s *Service) available(owner, kind, id string) error {
 	field, label := "id", "Account"
 	if kind == "provider" {
 		label = "Provider"
+	}
+	if kind == "aggregate" {
+		label = "Aggregate API"
 	}
 	if kind == "provider-group" {
 		field, label = "group", "Provider group"

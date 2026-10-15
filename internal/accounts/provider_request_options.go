@@ -138,7 +138,8 @@ func protectedProviderParameter(name string) bool {
 	switch name {
 	case "model", "stream", "stream_options", "input", "messages", "tools", "tool_choice",
 		"system", "instructions", "previous_response_id", "conversation", "include",
-		"api_key", "apiKey", "authorization":
+		"api_key", "apiKey", "authorization", "contents", "systemInstruction", "system_instruction",
+		"cachedContent", "cached_content", "toolConfig", "tool_config":
 		return true
 	}
 	return false

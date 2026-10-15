@@ -14,8 +14,10 @@ func TestModelSwitchChangesOnlySelectedTarget(t *testing.T) {
 	}{
 		{"gui-account", platform.JSON{"guiAccountId": "selected", "guiProviderId": nil}},
 		{"gui-provider", platform.JSON{"guiAccountId": nil, "guiProviderId": "selected"}},
+		{"gui-aggregate", platform.JSON{"guiAccountId": nil, "guiProviderId": "aggregate:selected"}},
 		{"account", platform.JSON{"activeAccountId": "selected", "activeProviderId": nil, "activeProviderGroup": nil}},
 		{"provider", platform.JSON{"activeProviderId": "selected", "activeProviderGroup": nil}},
+		{"aggregate", platform.JSON{"activeProviderId": "aggregate:selected", "activeProviderGroup": nil}},
 		{"provider-group", platform.JSON{"activeProviderId": nil, "activeProviderGroup": "selected"}},
 	}
 	for _, test := range tests {
@@ -29,13 +31,13 @@ func TestModelSwitchChangesOnlySelectedTarget(t *testing.T) {
 
 func TestGuiSwitchRequiresDesktopSupportButNotRunningProxy(t *testing.T) {
 	for _, spec := range deviceCommands {
-		if spec.capability != "gui-model-switch" {
+		if spec.capability != "gui-model-switch" && spec.capability != "gui-aggregate-switch" {
 			continue
 		}
 		if checkCapability(&Device{}, spec) == nil {
 			t.Fatal("allowed unsupported GUI switch")
 		}
-		device := &Device{Capabilities: []string{"gui-model-switch"}}
+		device := &Device{Capabilities: []string{spec.capability}}
 		if err := checkCapability(device, spec); err != nil {
 			t.Fatal("GUI selection should work before proxy startup", err)
 		}
@@ -43,6 +45,26 @@ func TestGuiSwitchRequiresDesktopSupportButNotRunningProxy(t *testing.T) {
 	proxy := commandSpec{path: "provider", capability: "provider-switch"}
 	if checkCapability(&Device{Capabilities: []string{"provider-switch"}}, proxy) == nil {
 		t.Fatal("proxy switching still requires a running proxy")
+	}
+}
+
+func TestAggregateSwitchRequiresDedicatedCapabilityAndRunningProxy(t *testing.T) {
+	for _, spec := range deviceCommands {
+		if spec.path != "aggregate" && spec.path != "gui-aggregate" {
+			continue
+		}
+		legacy := &Device{Capabilities: []string{"provider-switch", "gui-model-switch"}, LocalProxyRunning: true}
+		if checkCapability(legacy, spec) == nil {
+			t.Fatal("legacy client accepted aggregate command")
+		}
+		current := &Device{Capabilities: []string{spec.capability}, LocalProxyRunning: true}
+		if err := checkCapability(current, spec); err != nil {
+			t.Fatal(err)
+		}
+		current.LocalProxyRunning = false
+		if spec.path == "aggregate" && checkCapability(current, spec) == nil {
+			t.Fatal("proxy aggregate switch did not require a running proxy")
+		}
 	}
 }
 

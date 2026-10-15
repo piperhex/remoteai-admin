@@ -18,8 +18,10 @@ var deviceCommands = []commandSpec{
 	{"openai-auth-account", "set-openai-auth-account", "accountId", ""},
 	{"provider", "switch-provider", "providerId", "provider-switch"},
 	{"provider-group", "switch-provider-group", "group", "provider-group-switch"},
+	{"aggregate", "switch-aggregate", "aggregateId", "aggregate-switch"},
 	{"gui-account", "switch-gui-account", "accountId", "gui-model-switch"},
 	{"gui-provider", "switch-gui-provider", "providerId", "gui-model-switch"},
+	{"gui-aggregate", "switch-gui-aggregate", "aggregateId", "gui-aggregate-switch"},
 	{"restart-codex", "restart-codex", "", "restart-codex"},
 }
 
@@ -53,6 +55,11 @@ func Register(router *gin.Engine, deps *platform.Dependencies) (*Runtime, error)
 	})
 	group.GET("/providers", func(c *gin.Context) {
 		providers, err := service.providers(platform.User(c).ID)
+		if err == nil && c.Query("includeAggregates") == "true" {
+			var aggregates []platform.JSON
+			aggregates, err = service.aggregates(platform.User(c).ID)
+			providers = append(providers, aggregates...)
+		}
 		platform.Respond(c, gin.H{"providers": providers}, err)
 	})
 	group.DELETE("/:deviceId", gateway.remove)
@@ -145,7 +152,7 @@ func checkCapability(device *Device, spec commandSpec) error {
 	if !has {
 		return platform.NewError(409, "请先更新目标 PC 上的 Remote AI")
 	}
-	if (spec.path == "provider" || spec.path == "provider-group") && !device.LocalProxyRunning {
+	if (spec.path == "provider" || spec.path == "provider-group" || spec.path == "aggregate") && !device.LocalProxyRunning {
 		return platform.NewError(409, "请先在目标 PC 上启动本地代理")
 	}
 	return nil
@@ -190,7 +197,7 @@ func (g *ControlGateway) saveCommand(previous *Device, spec commandSpec, value s
 	result["activeProviderGroup"] = device.ActiveProviderGroup
 	result["guiAccountId"] = device.GuiAccountID
 	result["guiProviderId"] = device.GuiProviderID
-	if spec.capability == "gui-model-switch" {
+	if strings.HasPrefix(spec.path, "gui-") {
 		result["requiresRestart"] = false
 		return result, nil
 	}

@@ -137,6 +137,7 @@ func TestProviderRequestOptionsProtectCredentialsAndProtocol(t *testing.T) {
 	fields := []string{
 		"model", "stream", "stream_options", "input", "messages", "tools", "tool_choice", "system",
 		"instructions", "previous_response_id", "conversation", "include", "api_key", "apiKey", "authorization",
+		"contents", "systemInstruction", "system_instruction", "cachedContent", "cached_content", "toolConfig", "tool_config",
 	}
 	for _, name := range fields {
 		if err := validateProviderRequestOptions(object{"body": object{name: "value"}}); err == nil {

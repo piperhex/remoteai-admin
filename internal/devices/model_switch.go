@@ -10,6 +10,8 @@ func modelSwitchPatch(path, value string) platform.JSON {
 		patch["activeAccountId"], patch["activeProviderId"], patch["activeProviderGroup"] = value, nil, nil
 	case "provider":
 		patch["activeProviderId"], patch["activeProviderGroup"] = value, nil
+	case "aggregate":
+		patch["activeProviderId"], patch["activeProviderGroup"] = "aggregate:"+value, nil
 	case "provider-group":
 		patch["activeProviderId"], patch["activeProviderGroup"] = nil, value
 	case "openai-auth-account":
@@ -18,6 +20,8 @@ func modelSwitchPatch(path, value string) platform.JSON {
 		patch["guiAccountId"], patch["guiProviderId"] = value, nil
 	case "gui-provider":
 		patch["guiAccountId"], patch["guiProviderId"] = nil, value
+	case "gui-aggregate":
+		patch["guiAccountId"], patch["guiProviderId"] = nil, "aggregate:"+value
 	}
 	return patch
 }
