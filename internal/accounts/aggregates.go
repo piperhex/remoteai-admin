@@ -108,7 +108,7 @@ func validateAggregateConfiguration(entry aggregateRecord) error {
 	}
 	seen := map[string]bool{}
 	for _, id := range config.MemberProviderIDs {
-		if !aggregateID.MatchString(id) || seen[id] {
+		if !aggregateID.MatchString(strings.TrimPrefix(id, "account:")) || seen[id] {
 			return invalidAggregate()
 		}
 		seen[id] = true

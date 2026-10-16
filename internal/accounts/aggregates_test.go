@@ -70,6 +70,32 @@ func TestAggregateMigrationMatchesFreshSchema(t *testing.T) {
 	}
 }
 
+func TestAggregateOfficialAccountMembers(t *testing.T) {
+	for _, members := range [][]interface{}{
+		{"one", "account:official-one"}, {"account:official-one", "account:official-two"},
+	} {
+		entry := aggregateFixture(t)
+		entry.Config["memberProviderIds"] = members
+		entry.Config["memberModels"] = object{"account:official-one": "official-model"}
+		if err := validateAggregateConfiguration(entry); err != nil {
+			t.Fatalf("valid official members rejected: %v", err)
+		}
+	}
+	for _, id := range []string{"account:", "account:../outside", "account:account:nested", "aggregate:route"} {
+		entry := aggregateFixture(t)
+		entry.Config["memberProviderIds"] = []interface{}{"one", id}
+		if validateAggregateConfiguration(entry) == nil {
+			t.Fatalf("invalid member accepted: %s", id)
+		}
+	}
+	entry := aggregateFixture(t)
+	entry.Config["memberProviderIds"] = []interface{}{"account:one", "account:one"}
+	entry.Config["memberModels"] = object{}
+	if validateAggregateConfiguration(entry) == nil {
+		t.Fatal("duplicate official member accepted")
+	}
+}
+
 func TestAggregateDatabaseRoundTripAndOwnerIsolation(t *testing.T) {
 	tx := providerOptionsTestDB(t)
 	sql, err := os.ReadFile("../../sql/20261015-aggregate-sync.sql")
