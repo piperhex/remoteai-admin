@@ -341,6 +341,31 @@ PC 发起端和被控端都需要带 TCP 协商的版本；仅更新被控端不
 
 ## 加载并更新 Go
 
+仓库根目录提供 `npm run deploy:admin` 和 `npm run deploy:web`，分别更新管理后端（含管理页面）
+和独立 Web。命令在当前 Docker 环境执行，要求 Node.js、Docker Compose；admin 还需要 Python 3。
+它们使用已构建或加载的镜像，不执行 SSH、上传、数据库迁移或镜像构建。
+先完成前文的目标提交验证、镜像加载、回滚镜像保留和数据库检查，再运行更新命令。
+
+```bash
+# 替换为当前容器记录的实际 Compose 项目名。
+npm run deploy:admin -- check --project-name admin-go
+npm run deploy:admin -- up --project-name admin-go
+npm run deploy:admin -- verify --project-name admin-go
+
+npm run deploy:web -- check --project-name web
+npm run deploy:web -- up --project-name web
+npm run deploy:web -- verify --project-name web
+```
+
+省略操作名时默认执行 `up`；`check` 和 `verify` 都是只读操作。
+admin 命令直接调用下面的 Python 入口，保留其全部配置和中继保护。
+Web 必须显式传入 `--project-name`，已有环境沿用原项目名，避免另起一份服务。
+两者都支持 `--env-file`、可重复的 `--file`，以及仅用于 `up` 的 `--force-recreate`。
+Web 默认读取已有 `apps/web/.env`；使用其他变量文件或运行时环境变量的部署，后续命令应保持一致。
+Web 保留容器记录的完整 Compose 文件顺序，新安装读取基础配置和已存在的 `compose.override.yml`。
+Web 更新只操作 `web`，不构建、不拉取镜像、不重启依赖，等待健康检查并核对镜像、网络和访问别名。
+命令成功后仍须验证公网页面、静态资源、API 和实际连接；admin 的中继验收要求见下文。
+
 服务器仓库必须能快进到已验证的目标提交，禁止 reset 或强制覆盖本地改动。
 先记录运行镜像并创建回滚 tag，再校验上传文件的 SHA-256，使用 `docker image load --input`
 加载镜像，并核对镜像 ID、Linux 平台与本地记录一致。
