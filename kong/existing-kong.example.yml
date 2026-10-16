@@ -44,6 +44,7 @@ services:
         paths:
           - /sync
           - /official-usage
+          - /update-sharing/reports
           - /admin/api
           - /devices
           - /remote-assistance

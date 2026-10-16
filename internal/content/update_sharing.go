@@ -14,6 +14,7 @@ import (
 )
 
 func (s *service) updateSharingRoutes(r *gin.Engine) {
+	s.updateDownloadRoutes(r)
 	r.GET("/update-sharing/settings", noStore, s.readUpdateSharing)
 	r.GET("/admin/api/update-sharing", s.deps.RequirePermissions("admin.update-sharing.read"),
 		noStore, s.readUpdateSharing)

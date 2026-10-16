@@ -2,6 +2,7 @@ package updatecache
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -31,6 +32,11 @@ func Register(router *gin.Engine, config platform.Config) func() {
 	}
 	slots := make(chan struct{}, 16)
 	handler := func(c *gin.Context) {
+		defer func() {
+			if c.Writer.Status() >= http.StatusBadRequest {
+				slog.Warn("update server download failed", "status", c.Writer.Status(), "method", c.Request.Method)
+			}
+		}()
 		select {
 		case slots <- struct{}{}:
 			defer func() { <-slots }()

@@ -50,6 +50,9 @@ var aggregateSyncSchema string
 //go:embed 015_port_mappings.sql
 var portMappingsSchema string
 
+//go:embed 016_update_download_reports.sql
+var updateDownloadReportsSchema string
+
 // InitializeEmpty never changes existing tables, constraints, indexes, or customer data.
 // Existing deployments continue to apply the versioned apps/admin-go/sql migrations.
 func InitializeEmpty(db *gorm.DB) error {
@@ -105,6 +108,9 @@ func InitializeEmpty(db *gorm.DB) error {
 		if err := tx.Exec(updateSharingSchema).Error; err != nil {
 			return err
 		}
-		return tx.Exec(portMappingsSchema).Error
+		if err := tx.Exec(portMappingsSchema).Error; err != nil {
+			return err
+		}
+		return tx.Exec(updateDownloadReportsSchema).Error
 	})
 }
