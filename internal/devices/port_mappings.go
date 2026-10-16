@@ -17,6 +17,7 @@ type portMapping struct {
 	RemoteHost string `json:"remoteHost"`
 	RemotePort int    `json:"remotePort"`
 	LocalPort  int    `json:"localPort"`
+	Protocol   string `json:"protocol,omitempty"`
 	UpdatedAt  int64  `json:"updatedAt,omitempty"`
 }
 
@@ -64,6 +65,9 @@ func validatePortMappings(doc mappingDocument) error {
 	}
 	seen := map[string]bool{}
 	for _, entry := range doc.Mappings {
+		if entry.Protocol != "" && entry.Protocol != "tcp" && entry.Protocol != "udp" && entry.Protocol != "both" {
+			return invalid
+		}
 		ip := net.ParseIP(entry.RemoteHost)
 		if !mappingID.MatchString(entry.ID) || seen[entry.ID] || ip == nil || ip.IsUnspecified() ||
 			entry.RemotePort < 1 || entry.RemotePort > 65535 || entry.LocalPort < 1 || entry.LocalPort > 65535 ||

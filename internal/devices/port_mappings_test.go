@@ -1,6 +1,7 @@
 package devices
 
 import (
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -19,6 +20,7 @@ func TestPortMappingValidation(t *testing.T) {
 		func(v *portMapping) { v.RemoteHost = "::" },
 		func(v *portMapping) { v.RemotePort = 0 },
 		func(v *portMapping) { v.LocalPort = 65536 },
+		func(v *portMapping) { v.Protocol = "icmp" },
 		func(v *portMapping) { v.ID = "../mapping" },
 		func(v *portMapping) { v.UpdatedAt = time.Now().Add(time.Hour).UnixMilli() },
 	} {
@@ -33,6 +35,26 @@ func TestPortMappingValidation(t *testing.T) {
 	}
 	if validatePortMappings(mappingDocument{Mappings: nil}) == nil {
 		t.Fatal("null mappings")
+	}
+}
+
+func TestPortMappingProtocolRoundtrip(t *testing.T) {
+	for _, protocol := range []string{"", "tcp", "udp", "both"} {
+		entry := portMapping{ID: "mapping", RemoteHost: "127.0.0.1", RemotePort: 53, LocalPort: 1053, Protocol: protocol}
+		if err := validatePortMappings(mappingDocument{Mappings: []portMapping{entry}}); err != nil {
+			t.Fatal(err)
+		}
+		data, err := json.Marshal(entry)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var restored portMapping
+		if err := json.Unmarshal(data, &restored); err != nil {
+			t.Fatal(err)
+		}
+		if restored.Protocol != protocol {
+			t.Fatal("protocol was lost")
+		}
 	}
 }
 
