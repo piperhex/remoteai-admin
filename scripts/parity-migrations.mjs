@@ -18,7 +18,7 @@ const goOnlyTables = ['token_cost_preset_settings', 'user_login_locks', 'chat_re
   'chat_push_subscriptions', 'chat_push_deliveries', 'desktop_service_credentials',
   'official_usage_v2_devices', 'official_usage_v2_accounts', 'official_usage_v2_minutes',
   'official_quota_v2_observations', 'official_quota_v2_declines',
-  'synced_aggregates', 'update_sharing_settings', 'device_port_mappings'];
+  'synced_aggregates', 'update_sharing_settings', 'device_port_mappings', 'update_download_reports'];
 
 function docker(...args) {
   return execFileSync('docker', args, { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim();
@@ -149,6 +149,34 @@ async function checkPortMappingMigration(postgres) {
   console.log('PASS port mapping upgrade matches bootstrap and preserves existing mappings on rerun');
 }
 
+async function checkDownloadReportMigration(postgres) {
+  const client = await database('admin_go');
+  const baseline = schema(postgres, 'admin_go');
+  const migration = readFileSync(new URL('../sql/20261017-update-download-reports.sql', import.meta.url), 'utf8');
+  const embeddedPath = new URL('../internal/migrations/016_update_download_reports.sql', import.meta.url);
+  const embedded = readFileSync(embeddedPath, 'utf8');
+  assert.equal(migration, embedded, 'new and upgraded installations must use the same download report schema');
+  try {
+    await client.query('BEGIN');
+    const owner = (await client.query('SELECT id FROM users ORDER BY id LIMIT 1')).rows[0].id;
+    const reportId = 'cc22cc22-0000-4000-8000-000000000002';
+    await client.query(`INSERT INTO update_download_reports
+      (id,user_id,artifact,platform,outcome,peer_bytes,server_bytes,origin_bytes,failures)
+      VALUES($1,$2,'migration-sentinel','windows','success',512,1024,256,'[]')`, [reportId, owner]);
+    await client.query(migration);
+    await client.query(migration);
+    const saved = await client.query(`SELECT outcome,peer_bytes::int,server_bytes::int,origin_bytes::int,failures
+      FROM update_download_reports WHERE id=$1 AND user_id=$2`, [reportId, owner]);
+    assert.deepEqual(saved.rows, [{ outcome: 'success', peer_bytes: 512, server_bytes: 1024,
+      origin_bytes: 256, failures: [] }], 'migration reruns must preserve download reports');
+  } finally {
+    await client.query('ROLLBACK');
+    await client.end();
+  }
+  assert.equal(schema(postgres, 'admin_go'), baseline, 'download report migration reruns must preserve schema');
+  console.log('PASS download report upgrade matches bootstrap and preserves reports on rerun');
+}
+
 export async function runMigrations() {
   const postgres = serviceContainer('postgres');
   const config = JSON.parse(docker('inspect', serviceContainer('admin-go')))[0];
@@ -159,6 +187,7 @@ export async function runMigrations() {
   console.log('PASS existing PostgreSQL columns, defaults, indexes and constraints match');
   await checkUsageMigration(postgres);
   await checkPortMappingMigration(postgres);
+  await checkDownloadReportMigration(postgres);
   await stopBootstrap();
   const admin = await database('legacy');
   try {
@@ -208,6 +237,7 @@ export async function runMigrations() {
   return [{ label: 'existing schema unchanged' }, { label: 'empty schema initialization' },
     { label: 'usage v2 upgrade retains legacy data without importing it' },
     { label: 'port mapping upgrade preserves saved mappings on rerun' },
+    { label: 'download report upgrade preserves saved reports on rerun' },
     { label: 'idempotent initialization and data preservation' }];
 }
 
