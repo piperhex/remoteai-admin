@@ -181,7 +181,8 @@ func normalizeModels(key string, configured object, models []string) object {
 				result[model] = n
 			}
 		case "modelApiFormats":
-			if value == "openaiResponses" || value == "openaiChat" || value == "anthropicMessages" {
+			switch value {
+			case "openaiResponses", "openaiChat", "anthropicMessages", "geminiGenerateContent":
 				result[model] = value
 			}
 		}
