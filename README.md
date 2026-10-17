@@ -126,6 +126,12 @@ Linux 并发检查使用独立 Docker 构建目标：
 docker build -f apps/admin-go/Dockerfile --target verify -t codex-admin-go:verify .
 ```
 
+端口映射性能回归使用 `node apps/admin-go/scripts/port-stream-smoke.mjs`（在仓库根目录执行）。
+测试对比本机 HTTP 直连与经过 Go 中继的加密 TCP 映射，检查单连接、四连接并发及
+1 MiB/s 有序慢接收下的响应 SHA-256、吞吐、首字节延迟和实际发送量，防止重复发送放大流量。
+仅使用固定本地测试服务 `127.0.0.1:28081`，结束后恢复聊天策略并删除测试设备。
+这些脚本共享测试数据，应依次执行。
+
 下载背压回归使用 `node apps/admin-go/scripts/bulk-relay-smoke.mjs`，仅连接上述本地 Go 测试服务。
 测试使用共享加密协议、真实 WebSocket、PostgreSQL 和 Redis，覆盖 16 条记录连续突发、
 双文件、接收端短暂停读、传输期间控制消息，以及重连后的完整性校验。
