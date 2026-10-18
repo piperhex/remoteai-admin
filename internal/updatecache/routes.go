@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -54,20 +55,16 @@ func Register(router *gin.Engine, config platform.Config) func() {
 
 func (s *cache) serve(c *gin.Context) {
 	version, name := c.Param("version"), c.Param("name")
-	if versionParts(version) == nil || !namePattern.MatchString(name) {
-		c.Status(http.StatusNotFound)
-		return
-	}
 	if len(c.GetHeader("Range")) > 128 || strings.Contains(c.GetHeader("Range"), ",") {
 		c.Status(http.StatusRequestedRangeNotSatisfiable)
 		return
 	}
 	s.mu.RLock()
-	entry, ok := s.records[key(version, name)]
+	entry, ok := s.lookup(version, name)
 	var file *os.File
 	var err error
 	if ok {
-		file, err = os.Open(filepath.Join(s.root, version, name))
+		file, err = os.Open(filepath.Join(s.root, entry.Version, entry.Asset.Name))
 	}
 	s.mu.RUnlock()
 	if !ok || err != nil {
@@ -84,7 +81,28 @@ func (s *cache) serve(c *gin.Context) {
 	c.Header("Cache-Control", "public, max-age=3600")
 	c.Header("Content-Type", "application/octet-stream")
 	c.Header("X-Content-Type-Options", "nosniff")
-	http.ServeContent(c.Writer, c.Request, name, info.ModTime(), file)
+	http.ServeContent(c.Writer, c.Request, entry.Asset.Name, info.ModTime(), file)
+}
+
+// lookup requires mu to be held. Asset IDs only resolve already verified, retained files.
+func (s *cache) lookup(version, name string) (record, bool) {
+	if version == "assets" {
+		id, err := strconv.ParseInt(name, 10, 64)
+		if err != nil || id <= 0 || strconv.FormatInt(id, 10) != name {
+			return record{}, false
+		}
+		for _, entry := range s.records {
+			if entry.Asset.ID == id {
+				return entry, true
+			}
+		}
+		return record{}, false
+	}
+	if versionParts(version) == nil || !namePattern.MatchString(name) {
+		return record{}, false
+	}
+	entry, ok := s.records[key(version, name)]
+	return entry, ok
 }
 
 func (s *cache) status(c *gin.Context) {

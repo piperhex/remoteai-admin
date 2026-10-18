@@ -28,6 +28,7 @@ var namePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]{0,199}$`)
 var digestPattern = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 
 type asset struct {
+	ID     int64  `json:"id,omitempty"`
 	Name   string `json:"name"`
 	URL    string `json:"browser_download_url"`
 	Digest string `json:"digest"`
@@ -68,7 +69,7 @@ func supportedAsset(tag string, value asset) bool {
 	if value.URL != releasePrefix+tag+"/"+url.PathEscape(value.Name) {
 		return false
 	}
-	for _, extension := range []string{".apk", ".exe", ".msi", ".zip", ".tar.gz", ".AppImage", ".dmg"} {
+	for _, extension := range []string{".apk", ".exe", ".msi", ".zip", ".tar.gz", ".AppImage", ".deb", ".dmg"} {
 		if strings.HasSuffix(value.Name, extension) {
 			return true
 		}
