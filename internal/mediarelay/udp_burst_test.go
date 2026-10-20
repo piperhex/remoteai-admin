@@ -83,7 +83,36 @@ func sendKeyframe(t *testing.T, send func([]byte) (int, error), entered <-chan s
 	}
 }
 
-func receiveKeyframe(t *testing.T, socket *net.UDPConn) {
+func waitForQueuedKeyframe(t *testing.T, proxy *Proxy) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		proxy.udpBudget.mu.Lock()
+		buffered := proxy.udpBudget.bytes
+		proxy.udpBudget.mu.Unlock()
+		if buffered == keyframePackets*keyframePacketBytes {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatal("relay did not buffer the complete keyframe while accounting was paused")
+}
+
+func writeAndAwaitKeyframeReceive(ctx context.Context, received <-chan struct{}, write func() error) error {
+	if err := write(); err != nil {
+		return err
+	}
+	// Linux can cap SO_RCVBUF below a whole keyframe even when SetReadBuffer succeeds.
+	// After the accounting pause, keep the fixture's receiver from becoming the bottleneck.
+	select {
+	case <-received:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func receiveKeyframe(t *testing.T, socket *net.UDPConn, received chan<- struct{}) {
 	t.Helper()
 	if err := socket.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
 		t.Fatal(err)
@@ -97,6 +126,7 @@ func receiveKeyframe(t *testing.T, socket *net.UDPConn) {
 		if n != keyframePacketBytes || int(binary.BigEndian.Uint16(buffer[4:6])) != i {
 			t.Fatalf("keyframe packet %d missing or reordered", i)
 		}
+		received <- struct{}{}
 	}
 }
 
@@ -105,6 +135,7 @@ func TestUDPKeyframeSurvivesAnAccountingPause(t *testing.T) {
 	for _, direction := range []string{"upload", "download"} {
 		t.Run(direction, func(t *testing.T) {
 			entered, resume := make(chan struct{}), make(chan struct{})
+			received := make(chan struct{}, 1)
 			var pause, release sync.Once
 			var billed atomic.Int64
 			fixture := openUDPFixture(t, func(ctx context.Context, owner string, size int, write func() error) error {
@@ -115,7 +146,7 @@ func TestUDPKeyframeSurvivesAnAccountingPause(t *testing.T) {
 				select {
 				case <-resume:
 					billed.Add(int64(size))
-					return write()
+					return writeAndAwaitKeyframeReceive(ctx, received, write)
 				case <-ctx.Done():
 					return ctx.Err()
 				}
@@ -128,8 +159,9 @@ func TestUDPKeyframeSurvivesAnAccountingPause(t *testing.T) {
 				target = fixture.client
 			}
 			sendKeyframe(t, send, entered)
+			waitForQueuedKeyframe(t, fixture.proxy)
 			unblock()
-			receiveKeyframe(t, target)
+			receiveKeyframe(t, target, received)
 			fixture.proxy.Close()
 			if billed.Load() != keyframePackets*keyframePacketBytes || fixture.proxy.udpBudget.bytes != 0 {
 				t.Fatal("packet accounting or shutdown cleanup failed")
