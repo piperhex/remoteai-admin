@@ -99,6 +99,7 @@ func TestKongRoutesCoverRegisteredGoEndpoints(t *testing.T) {
 func TestKongRouteAuthenticationBoundaries(t *testing.T) {
 	services := readKongServices(t)
 	for _, path := range []string{"/sync/accounts", "/admin/api/users", "/devices", "/official-usage",
+		"/devices/00000000-0000-4000-8000-000000000000/screen-power",
 		"/remote-assistance", "/chat-push/status", "/admin/api/update-sharing", "/update-sharing/reports",
 		"/admin/api/update-sharing/daily", "/admin/api/update-sharing/failures"} {
 		_, route := matchKongRoute(services, path)
