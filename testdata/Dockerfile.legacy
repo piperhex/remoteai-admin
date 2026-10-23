@@ -3,9 +3,11 @@ WORKDIR /source
 ARG NPM_REGISTRY=https://registry.npmmirror.com
 COPY package.json package-lock.json ./
 COPY apps/admin-ui/package.json ./apps/admin-ui/
+COPY packages/i18n/package.json ./packages/i18n/
 RUN --mount=type=cache,target=/root/.npm npm ci --workspace @codex-switch/admin-ui \
     --ignore-scripts --no-audit --no-fund --registry=$NPM_REGISTRY
 COPY apps/admin-ui ./apps/admin-ui
+COPY packages/i18n ./packages/i18n
 COPY shared ./shared
 RUN npm run build --workspace @codex-switch/admin-ui
 
