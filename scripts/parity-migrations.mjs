@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
+import { checkSshProfilesMigration } from './parity-ssh-profiles-migration.mjs';
 
 const require = createRequire(new URL('../testdata/tools/package.json', import.meta.url));
 const { Client } = require('pg');
@@ -18,7 +19,8 @@ const goOnlyTables = ['token_cost_preset_settings', 'user_login_locks', 'chat_re
   'chat_push_subscriptions', 'chat_push_deliveries', 'desktop_service_credentials',
   'official_usage_v2_devices', 'official_usage_v2_accounts', 'official_usage_v2_minutes',
   'official_quota_v2_observations', 'official_quota_v2_declines',
-  'synced_aggregates', 'update_sharing_settings', 'device_port_mappings', 'update_download_reports'];
+  'synced_aggregates', 'update_sharing_settings', 'device_port_mappings', 'update_download_reports',
+  'synced_ssh_profiles'];
 
 function docker(...args) {
   return execFileSync('docker', args, { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim();
@@ -188,6 +190,9 @@ export async function runMigrations() {
   await checkUsageMigration(postgres);
   await checkPortMappingMigration(postgres);
   await checkDownloadReportMigration(postgres);
+  const sshDatabase = await database('admin_go');
+  try { await checkSshProfilesMigration(sshDatabase); }
+  finally { await sshDatabase.end(); }
   await stopBootstrap();
   const admin = await database('legacy');
   try {
@@ -238,6 +243,7 @@ export async function runMigrations() {
     { label: 'usage v2 upgrade retains legacy data without importing it' },
     { label: 'port mapping upgrade preserves saved mappings on rerun' },
     { label: 'download report upgrade preserves saved reports on rerun' },
+    { label: 'SSH profile upgrade preserves saved profiles and deletion markers on rerun' },
     { label: 'idempotent initialization and data preservation' }];
 }
 

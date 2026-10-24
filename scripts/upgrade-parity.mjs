@@ -17,6 +17,7 @@ const migrations = [
   '20261015-update-sharing.sql',
   '20261015-port-mappings.sql',
   '20261017-update-download-reports.sql',
+  '20261024-ssh-profiles.sql',
 ];
 
 // The frozen Nest schema lacks Go additions; upgrade only the fixed localhost fixture database.
