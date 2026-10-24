@@ -10,6 +10,7 @@ import (
 	"github.com/codex-switch/admin-go/internal/devices"
 	"github.com/codex-switch/admin-go/internal/identity"
 	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/codex-switch/admin-go/internal/sshprofiles"
 	"github.com/codex-switch/admin-go/internal/telemetryguard"
 	"github.com/gin-gonic/gin"
 )
@@ -33,7 +34,7 @@ func New(deps *platform.Dependencies) (*gin.Engine, *devices.Runtime, error) {
 	}
 	router.Use(contract.Middleware(deps))
 	registrations := []func(*gin.Engine, *platform.Dependencies) error{
-		identity.Register, accounts.Register, content.Register,
+		identity.Register, accounts.Register, content.Register, sshprofiles.Register,
 	}
 	for _, register := range registrations {
 		if err := register(router, deps); err != nil {

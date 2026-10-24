@@ -529,6 +529,16 @@ Redis 事务同时保护接收名额、上传名额和接收端/共享端配对�
 新增 GET/PUT `/devices/:deviceId/port-mappings` 使用现有 `/devices` JWT 路由及设备归属校验，
 无需新增 Kong 公共路由。上线后验证两端新增、编辑、删除和离线重试；运行状态由各端独立管理。
 
+## SSH 配置多端同步
+
+先执行 `sql/20261024-ssh-profiles.sql`，再更新 admin-go 和客户端。空数据库初始化已包含新表。
+配置按登录用户保存，不绑定电脑；保存名称、地址、端口、用户名、登录方式和主机指纹，拒绝密码、私钥和私钥密码。
+GET `/sync/ssh-profiles` 读取列表，PUT/DELETE `/sync/ssh-profiles/:id` 按记录版本保存或删除，
+POST `/sync/ssh-profiles/import` 仅导入不存在的旧配置。删除记录保留，以阻止旧 PC 再次导入。
+现有 `/sync` Kong JWT 路由已覆盖这些接口，保持 `strip_path: false`，无需新增公共路由。
+旧 PC 配置在首次使用时上传，成功后移除本地旧副本；导入失败会保留本地数据供重试。
+升级后验证同账号跨端新增、修改、删除、账号隔离和冲突提示。回滚时保留表，旧客户端不会读取云端配置。
+
 ## 每日下载统计与失败日志
 
 先执行 `sql/20261017-update-download-reports.sql`，再更新 admin-go、admin-ui 及桌面/Android 客户端。
