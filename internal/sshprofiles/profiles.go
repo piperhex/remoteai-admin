@@ -1,4 +1,4 @@
-// Package sshprofiles stores account-owned SSH connection metadata, never credentials.
+// Package sshprofiles synchronizes account-owned SSH settings and encrypted login credentials.
 package sshprofiles
 
 import (
@@ -59,15 +59,8 @@ func Register(router *gin.Engine, deps *platform.Dependencies) error {
 		result, err := list(deps.DB.WithContext(c.Request.Context()), platform.User(c).ID)
 		platform.Respond(c, result, err)
 	})
-	r.PUT("/:id", func(c *gin.Context) {
-		var value profile
-		if decode(c, &value) != nil || value.ID != c.Param("id") || validate(value) != nil {
-			platform.Respond(c, nil, invalid())
-			return
-		}
-		result, err := mutate(deps.DB.WithContext(c.Request.Context()), platform.User(c).ID, change{Value: value})
-		platform.Respond(c, result, err)
-	})
+	r.PUT("/:id", func(c *gin.Context) { saveProfile(c, deps) })
+	r.POST("/:id/credentials", func(c *gin.Context) { fetchCredentials(c, deps) })
 	r.DELETE("/:id", func(c *gin.Context) {
 		var body struct {
 			Revision int64 `json:"revision"`
@@ -88,7 +81,7 @@ func Register(router *gin.Engine, deps *platform.Dependencies) error {
 func decode(c *gin.Context, value interface{}) error {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBodyBytes)
 	decoder := json.NewDecoder(c.Request.Body)
-	// Unknown fields include passwords, keys and ownership claims; never persist them.
+	// Reject ownership claims and credentials outside the dedicated save payload.
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(value); err != nil {
 		return invalid()

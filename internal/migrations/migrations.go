@@ -56,6 +56,9 @@ var updateDownloadReportsSchema string
 //go:embed 017_ssh_profiles.sql
 var sshProfilesSchema string
 
+//go:embed 018_ssh_credentials.sql
+var sshCredentialsSchema string
+
 // InitializeEmpty never changes existing tables, constraints, indexes, or customer data.
 // Existing deployments continue to apply the versioned apps/admin-go/sql migrations.
 func InitializeEmpty(db *gorm.DB) error {
@@ -117,6 +120,9 @@ func InitializeEmpty(db *gorm.DB) error {
 		if err := tx.Exec(updateDownloadReportsSchema).Error; err != nil {
 			return err
 		}
-		return tx.Exec(sshProfilesSchema).Error
+		if err := tx.Exec(sshProfilesSchema).Error; err != nil {
+			return err
+		}
+		return tx.Exec(sshCredentialsSchema).Error
 	})
 }

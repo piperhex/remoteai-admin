@@ -8,17 +8,19 @@ import (
 )
 
 type record struct {
-	OwnerID string   `gorm:"column:ownerId;primaryKey"`
-	ID      string   `gorm:"column:profileId;primaryKey"`
-	Version int64    `gorm:"column:revision"`
-	Config  *profile `gorm:"column:config;serializer:json"`
+	OwnerID              string   `gorm:"column:ownerId;primaryKey"`
+	ID                   string   `gorm:"column:profileId;primaryKey"`
+	Version              int64    `gorm:"column:revision"`
+	Config               *profile `gorm:"column:config;serializer:json"`
+	EncryptedCredentials *string  `gorm:"column:encryptedCredentials"`
 }
 
 func (record) TableName() string { return "synced_ssh_profiles" }
 
 func list(db *gorm.DB, owner string) ([]profile, error) {
 	rows := []record{}
-	err := db.Where(`"ownerId" = ? AND config IS NOT NULL`, owner).Order(`"profileId"`).
+	err := db.Select(`"ownerId", "profileId", revision, config`).
+		Where(`"ownerId" = ? AND config IS NOT NULL`, owner).Order(`"profileId"`).
 		Limit(maxProfiles + 1).Find(&rows).Error
 	result := make([]profile, 0, len(rows))
 	for _, row := range rows {
@@ -30,8 +32,9 @@ func list(db *gorm.DB, owner string) ([]profile, error) {
 }
 
 type change struct {
-	Value  profile
-	Delete bool
+	Value                profile
+	Delete               bool
+	EncryptedCredentials *string
 }
 
 // Serialize writes per owner so concurrent creates cannot exceed the limit or lose unrelated records.
@@ -55,12 +58,14 @@ func mutate(db *gorm.DB, owner string, edit change) ([]profile, error) {
 		}
 		if edit.Delete {
 			row.Config = nil
+			row.EncryptedCredentials = nil
 		} else {
 			if row.Version == 0 {
 				if err := checkCapacity(tx, owner); err != nil {
 					return err
 				}
 			}
+			updateCredentialStorage(&row, edit)
 			row.Config = &edit.Value
 		}
 		row.Version++
@@ -71,6 +76,21 @@ func mutate(db *gorm.DB, owner string, edit change) ([]profile, error) {
 		return err
 	})
 	return result, err
+}
+
+func updateCredentialStorage(row *record, edit change) {
+	if edit.EncryptedCredentials != nil {
+		row.EncryptedCredentials = edit.EncryptedCredentials
+		if *edit.EncryptedCredentials == "" {
+			row.EncryptedCredentials = nil
+		}
+		return
+	}
+	previous := row.Config
+	if previous != nil && (previous.Host != edit.Value.Host || previous.Port != edit.Value.Port ||
+		previous.Username != edit.Value.Username || previous.Auth != edit.Value.Auth) {
+		row.EncryptedCredentials = nil
+	}
 }
 
 func checkCapacity(tx *gorm.DB, owner string) error {
