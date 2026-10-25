@@ -20,14 +20,15 @@ const maxBodyBytes = 256 * 1024
 var profileID = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,128}$`)
 
 type profile struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Host        string `json:"host"`
-	Port        int    `json:"port"`
-	Username    string `json:"username"`
-	Auth        string `json:"auth"`
-	Fingerprint string `json:"fingerprint,omitempty"`
-	Revision    int64  `json:"revision,omitempty"`
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Host        string      `json:"host"`
+	Port        int         `json:"port"`
+	Username    string      `json:"username"`
+	Auth        string      `json:"auth"`
+	Fingerprint string      `json:"fingerprint,omitempty"`
+	Revision    int64       `json:"revision,omitempty"`
+	X11         *x11Options `json:"x11,omitempty"`
 }
 
 func invalid() error  { return platform.NewError(400, "client.ssh.invalid") }
@@ -45,6 +46,9 @@ func validate(value profile) error {
 		!validText(value.Username, 256) || strings.TrimSpace(value.Username) == "" ||
 		!validText(value.Fingerprint, 256) || value.Port < 1 || value.Port > 65535 ||
 		(value.Auth != "password" && value.Auth != "key") || value.Revision < 0 || value.Revision > 9007199254740990 {
+		return invalid()
+	}
+	if value.X11 != nil && !value.X11.valid() {
 		return invalid()
 	}
 	return nil

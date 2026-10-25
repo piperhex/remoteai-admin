@@ -225,7 +225,9 @@ func TestHTTPRoundTrip(t *testing.T) {
 	if err := Register(router, deps); err != nil {
 		t.Fatal(err)
 	}
-	body, _ := json.Marshal(fixture())
+	value := fixture()
+	value.X11 = &x11Options{Display: "localhost:1"}
+	body, _ := json.Marshal(value)
 	request := httptest.NewRequest("PUT", "/sync/ssh-profiles/server", strings.NewReader(string(body)))
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
@@ -236,6 +238,9 @@ func TestHTTPRoundTrip(t *testing.T) {
 	var values []profile
 	if json.Unmarshal(response.Body.Bytes(), &values) != nil || len(values) != 1 || values[0].Revision != 1 {
 		t.Fatal(response.Body.String())
+	}
+	if values[0].X11 == nil || values[0].X11.Display != value.X11.Display {
+		t.Fatal("X11 settings did not survive database round trip")
 	}
 }
 
