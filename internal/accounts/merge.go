@@ -45,13 +45,19 @@ func accountDTO(row account) object {
 		"phoneNumber": str(row.PrivateDetails["phoneNumber"]),
 		"totpSecret":  str(row.PrivateDetails["totpSecret"]),
 	}
-	if first(private["password"], private["phoneNumber"], private["totpSecret"]) != "" {
+	if has(row.PrivateDetails, "alias") {
+		private["alias"] = str(row.PrivateDetails["alias"])
+	}
+	if has(private, "alias") || first(private["password"], private["phoneNumber"], private["totpSecret"]) != "" {
 		result["privateDetails"] = private
 	}
 	return result
 }
 
 func mergeAccount(existing *account, owner string, incoming object) (*account, bool, error) {
+	if err := normalizeAccountAlias(obj(incoming["privateDetails"])); err != nil {
+		return nil, false, err
+	}
 	if existing != nil && existing.DeletedAt != nil {
 		return nil, false, nil
 	}
@@ -98,6 +104,10 @@ func mergeAccount(existing *account, owner string, incoming object) (*account, b
 }
 
 func applyAccountField(current, incoming object, key string) {
+	if key == "privateDetails" {
+		current[key] = preserveAccountAlias(obj(incoming[key]), obj(current[key]))
+		return
+	}
 	current[key] = valueOr(incoming[key], fieldDefault(key))
 	if key == "auth" {
 		for _, field := range []string{"email", "plan", "accountId"} {

@@ -7,6 +7,11 @@ import (
 )
 
 func (s *service) upsertAccounts(options writeOptions, incoming []object) (interface{}, error) {
+	for _, row := range incoming {
+		if err := normalizeAccountAlias(obj(row["privateDetails"])); err != nil {
+			return nil, err
+		}
+	}
 	bound, err := s.boundAccounts(options.Owner)
 	if err != nil {
 		return nil, err
@@ -106,7 +111,7 @@ func (s *service) updateBound(options writeOptions, system systemAccount, in obj
 	if !newer(next["privateDetails"], old["privateDetails"]) {
 		return nil
 	}
-	row.PrivateDetails = obj(in["privateDetails"])
+	row.PrivateDetails = preserveAccountAlias(obj(in["privateDetails"]), row.PrivateDetails)
 	old["privateDetails"] = next["privateDetails"]
 	row.FieldModifiedAt = old
 	row.LastModifiedAt = date(latest(old))

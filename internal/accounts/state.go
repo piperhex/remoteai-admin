@@ -228,12 +228,16 @@ type writeOptions struct {
 }
 
 func (s *service) updateDetails(options writeOptions, id string, patch object) (interface{}, error) {
+	if err := normalizeAccountAlias(obj(patch["privateDetails"])); err != nil {
+		return nil, err
+	}
 	row, err := s.effectiveByID(options.Owner, id)
 	if err != nil {
 		return nil, err
 	}
 	v := versions(obj(row["fieldModifiedAt"]), row["lastModifiedAt"], accountFields)
 	modified := iso(now())
+	patch["privateDetails"] = preserveAccountAlias(obj(patch["privateDetails"]), obj(row["privateDetails"]))
 	for _, key := range []string{"note", "expiresAt", "privateDetails"} {
 		row[key] = valueOr(patch[key], fieldDefault(key))
 		v[key] = modified
