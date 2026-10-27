@@ -102,6 +102,16 @@ func TestDesktopStartupFailureSurvivesNoiseAndRejectsPrivateDetails(t *testing.T
 	}
 }
 
+func TestDesktopSetupFailureCodesAreRetained(t *testing.T) {
+	for _, code := range []string{"desktop-locked", "unattended-required", "privacy-unavailable"} {
+		d, buffer := diagnosticFixture()
+		d.clientEvent("session", platform.JSON{"event": "desktop-failed", "desktopError": code})
+		if !strings.Contains(buffer.String(), `"desktopError":"`+code+`"`) {
+			t.Fatalf("setup failure code was lost: %s", code)
+		}
+	}
+}
+
 func TestDesktopStartupStagesRetainSafeCaptureMetadata(t *testing.T) {
 	d, buffer := diagnosticFixture()
 	d.clientEvent("session", platform.JSON{"event": "desktop-stage", "scope": "desktop", "stage": "stream-open",
