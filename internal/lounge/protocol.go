@@ -32,6 +32,10 @@ type incoming struct {
 	UserID  string      `json:"userId"`
 	Minutes *int        `json:"minutes"`
 	Reply   *replyQuote `json:"reply,omitempty"`
+	To      string      `json:"to,omitempty"`
+	Blocked *bool       `json:"blocked"`
+	Watch   []string    `json:"watch"`
+	Direct  bool        `json:"direct"`
 }
 
 type account struct {
@@ -41,20 +45,22 @@ type account struct {
 }
 
 type message struct {
-	Type   string      `json:"type"`
-	ID     string      `json:"id"`
-	Sender account     `json:"sender"`
-	Text   string      `json:"text"`
-	Images []string    `json:"images"`
-	SentAt string      `json:"sentAt"`
-	Reply  *replyQuote `json:"reply,omitempty"`
+	Type      string      `json:"type"`
+	ID        string      `json:"id"`
+	Sender    account     `json:"sender"`
+	Text      string      `json:"text"`
+	Images    []string    `json:"images"`
+	SentAt    string      `json:"sentAt"`
+	Reply     *replyQuote `json:"reply,omitempty"`
+	Recipient *account    `json:"recipient,omitempty"`
 }
 
 var errInvalid = errors.New("invalid lounge frame")
 
 func validate(input incoming) error {
 	if len(input.ID) < 1 || len(input.ID) > 80 || utf8.RuneCountInString(input.Text) > maxTextLength ||
-		len(input.Images) > maxImages || (strings.TrimSpace(input.Text) == "" && len(input.Images) == 0) {
+		len(input.Images) > maxImages || len(input.To) > 80 ||
+		(strings.TrimSpace(input.Text) == "" && len(input.Images) == 0) {
 		return errInvalid
 	}
 	total := 0

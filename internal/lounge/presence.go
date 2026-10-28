@@ -61,6 +61,7 @@ func (h *hub) remove(client *peer) {
 	defer h.mu.Unlock()
 	delete(h.clients, client)
 	h.publishPresenceLocked(nil)
+	h.publishContactPresenceLocked()
 }
 
 func (h *hub) registerPresence(group *gin.RouterGroup, deps *platform.Dependencies) {

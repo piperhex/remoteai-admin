@@ -62,6 +62,9 @@ var sshCredentialsSchema string
 //go:embed 019_lounge_moderation.sql
 var loungeModerationSchema string
 
+//go:embed 020_lounge_blocks.sql
+var loungeBlocksSchema string
+
 // InitializeEmpty never changes existing tables, constraints, indexes, or customer data.
 // Existing deployments continue to apply the versioned apps/admin-go/sql migrations.
 func InitializeEmpty(db *gorm.DB) error {
@@ -129,6 +132,9 @@ func InitializeEmpty(db *gorm.DB) error {
 		if err := tx.Exec(sshCredentialsSchema).Error; err != nil {
 			return err
 		}
-		return tx.Exec(loungeModerationSchema).Error
+		if err := tx.Exec(loungeModerationSchema).Error; err != nil {
+			return err
+		}
+		return tx.Exec(loungeBlocksSchema).Error
 	})
 }

@@ -20,6 +20,11 @@ type peer struct {
 	user      account
 	expires   time.Time
 	moderator bool // Guarded by hub.mu, including live permission revocation.
+	direct    bool
+	blocks    map[string]bool
+	blockedBy map[string]bool
+	watching  map[string]bool
+	presence  map[string]*bool
 }
 
 type hub struct {
@@ -29,6 +34,8 @@ type hub struct {
 	clients       map[*peer]bool
 	closed        bool
 	presenceCount int
+	relationships relationshipRepository
+	settingsMu    sync.Mutex
 }
 
 func newHub(key []byte) *hub { return &hub{key: key, clients: make(map[*peer]bool)} }
@@ -41,19 +48,22 @@ func (p *peer) close() {
 	})
 }
 
-func (p *peer) enqueue(data []byte) {
+func (p *peer) enqueue(data []byte) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.queued+len(data) > maxQueuedBytes {
 		p.close()
-		return
+		return false
 	}
 	select {
 	case <-p.done:
+		return false
 	case p.queue <- data:
 		p.queued += len(data)
+		return true
 	default:
 		p.close()
+		return false
 	}
 }
 
@@ -95,7 +105,7 @@ func (h *hub) broadcast(sender *peer, input incoming) {
 	defer h.mu.Unlock()
 	// Only current authenticated connections receive this frame. There is no history, log, or replay store.
 	for client, authenticated := range h.clients {
-		if authenticated && client.expires.After(time.Now()) {
+		if authenticated && client.expires.After(time.Now()) && !client.blocks[sender.user.ID] {
 			client.enqueue(data)
 		}
 	}

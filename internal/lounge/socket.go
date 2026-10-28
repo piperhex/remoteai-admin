@@ -69,7 +69,7 @@ func (h *hub) read(client *peer) {
 
 func (h *hub) receive(client *peer, input incoming) bool {
 	if input.Type == "authenticate" {
-		return h.authorize(client, input.Ticket)
+		return h.authorize(client, input)
 	}
 	if client.user.ID == "" || !client.expires.After(time.Now()) {
 		return false
@@ -85,17 +85,31 @@ func (h *hub) receive(client *peer, input incoming) bool {
 		h.moderate(client, input)
 		return true
 	}
+	if input.Type == "watch" {
+		return h.watch(client, input.Watch)
+	}
+	if input.Type == "block" {
+		if len(input.ID) == 0 || len(input.ID) > 80 {
+			return false
+		}
+		h.block(client, input)
+		return true
+	}
 	if input.Type != "message" || validate(input) != nil {
 		return false
 	}
 	if h.maySend(client, input.ID) {
-		h.broadcast(client, input)
+		if input.To != "" {
+			h.direct(client, input)
+		} else {
+			h.broadcast(client, input)
+		}
 	}
 	return true
 }
 
-func (h *hub) authorize(client *peer, ticket string) bool {
-	user, expires, err := h.authenticate(ticket)
+func (h *hub) authorize(client *peer, input incoming) bool {
+	user, expires, err := h.authenticate(input.Ticket)
 	if err != nil || (client.user.ID != "" && user.ID != client.user.ID) {
 		return false
 	}
@@ -103,22 +117,33 @@ func (h *hub) authorize(client *peer, ticket string) bool {
 	if err != nil {
 		return false
 	}
+	h.settingsMu.Lock()
+	defer h.settingsMu.Unlock()
+	privacy, err := h.readRelationships(user.ID)
+	if err != nil {
+		return false
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	client.user, client.expires = user, expires
 	client.moderator = value.Moderator
+	client.direct = input.Direct
+	client.applyRelationships(privacy)
 	h.clients[client] = true
 	data, err := json.Marshal(struct {
-		Type        string  `json:"type"`
-		User        account `json:"user"`
-		Policy      policy  `json:"policy"`
-		OnlineCount *int    `json:"onlineCount,omitempty"`
-	}{"ready", user, value, h.onlineForLocked(value.Moderator)})
+		Type        string    `json:"type"`
+		User        account   `json:"user"`
+		Policy      policy    `json:"policy"`
+		OnlineCount *int      `json:"onlineCount,omitempty"`
+		Direct      bool      `json:"direct"`
+		Blocked     []account `json:"blocked"`
+	}{"ready", user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked})
 	if err != nil {
 		return false
 	}
 	client.enqueue(data)
 	h.publishPresenceLocked(client)
+	h.publishContactPresenceLocked()
 	client.conn.SetReadLimit(maxFrameBytes)
 	return true
 }

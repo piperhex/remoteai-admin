@@ -25,6 +25,7 @@ func Register(router *gin.Engine, deps *platform.Dependencies) (func(), error) {
 	}
 	hub := newHub(key)
 	hub.policies = postgresPolicies{db: deps.DB}
+	hub.relationships = postgresRelationships{db: deps.DB}
 	hub.registerModeration(router, deps)
 	router.POST("/lounge/ticket", deps.RequireAuth(), hub.ticket)
 	router.GET("/lounge/socket", hub.serve)
