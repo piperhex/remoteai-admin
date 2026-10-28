@@ -74,11 +74,15 @@ func write(t *testing.T, client *websocket.Conn, frame interface{}) {
 func read(t *testing.T, client *websocket.Conn) map[string]interface{} {
 	t.Helper()
 	client.SetReadDeadline(time.Now().Add(2 * time.Second))
-	var frame map[string]interface{}
-	if err := client.ReadJSON(&frame); err != nil {
-		t.Fatal(err)
+	for {
+		var frame map[string]interface{}
+		if err := client.ReadJSON(&frame); err != nil {
+			t.Fatal(err)
+		}
+		if frame["type"] != "presence" {
+			return frame
+		}
 	}
-	return frame
 }
 
 func picture(t *testing.T) string {

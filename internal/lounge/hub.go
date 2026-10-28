@@ -11,22 +11,24 @@ import (
 const maxQueuedBytes = 12 * 1024 * 1024
 
 type peer struct {
-	conn    *websocket.Conn
-	queue   chan []byte
-	done    chan struct{}
-	once    sync.Once
-	mu      sync.Mutex
-	queued  int
-	user    account
-	expires time.Time
+	conn      *websocket.Conn
+	queue     chan []byte
+	done      chan struct{}
+	once      sync.Once
+	mu        sync.Mutex
+	queued    int
+	user      account
+	expires   time.Time
+	moderator bool // Guarded by hub.mu, including live permission revocation.
 }
 
 type hub struct {
-	policies policyRepository
-	key      []byte
-	mu       sync.Mutex
-	clients  map[*peer]bool
-	closed   bool
+	policies      policyRepository
+	key           []byte
+	mu            sync.Mutex
+	clients       map[*peer]bool
+	closed        bool
+	presenceCount int
 }
 
 func newHub(key []byte) *hub { return &hub{key: key, clients: make(map[*peer]bool)} }
@@ -85,7 +87,7 @@ func (h *hub) broadcast(sender *peer, input incoming) {
 	profile := sender.user
 	profile.Avatar = input.Avatar
 	data, err := json.Marshal(message{Type: "message", ID: input.ID, Sender: profile,
-		Text: input.Text, Images: input.Images, SentAt: time.Now().UTC().Format(time.RFC3339Nano)})
+		Text: input.Text, Images: input.Images, Reply: input.Reply, SentAt: time.Now().UTC().Format(time.RFC3339Nano)})
 	if err != nil {
 		return
 	}

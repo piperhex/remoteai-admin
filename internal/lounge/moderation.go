@@ -12,6 +12,7 @@ import (
 
 func (h *hub) registerModeration(router *gin.Engine, deps *platform.Dependencies) {
 	group := router.Group("/admin/api/lounge", deps.RequireAuth())
+	h.registerPresence(group, deps)
 	group.GET("/users/:id", deps.RequirePermissions("admin.users.read"), func(c *gin.Context) {
 		if _, err := uuid.Parse(c.Param("id")); err != nil {
 			platform.Fail(c, 400, "client.lounge.userUnavailable")
@@ -51,17 +52,19 @@ func (h *hub) changePolicy(ctx context.Context, request policyUpdate) (policy, e
 }
 
 func (h *hub) notifyPolicy(user string, value policy) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	data, err := json.Marshal(struct {
-		Type   string `json:"type"`
-		Policy policy `json:"policy"`
-	}{"policy", value})
+		Type        string `json:"type"`
+		Policy      policy `json:"policy"`
+		OnlineCount *int   `json:"onlineCount,omitempty"`
+	}{"policy", value, h.onlineForLocked(value.Moderator)})
 	if err != nil {
 		return
 	}
-	h.mu.Lock()
-	defer h.mu.Unlock()
 	for client := range h.clients {
 		if client.user.ID == user {
+			client.moderator = value.Moderator
 			client.enqueue(data)
 		}
 	}

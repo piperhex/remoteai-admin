@@ -19,7 +19,8 @@ func TestLoungeFailuresNeverWriteSharedRequestLogs(t *testing.T) {
 	slog.SetDefault(slog.New(slog.NewTextHandler(&output, nil)))
 	t.Cleanup(func() { gin.DefaultErrorWriter = previousWriter; slog.SetDefault(previousLogger) })
 	gin.SetMode(gin.TestMode)
-	for _, path := range []string{"/lounge/ticket", "/lounge/socket", "/admin/api/lounge/users/example", "/ordinary"} {
+	for _, path := range []string{"/lounge/ticket", "/lounge/socket", "/admin/api/lounge/users/example",
+		"/admin/api/lounge/presence", "/ordinary"} {
 		for _, panicFailure := range []bool{false, true} {
 			output.Reset()
 			router := gin.New()

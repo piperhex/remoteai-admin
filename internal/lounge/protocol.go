@@ -23,14 +23,15 @@ const (
 )
 
 type incoming struct {
-	Type    string   `json:"type"`
-	Ticket  string   `json:"ticket"`
-	ID      string   `json:"id"`
-	Text    string   `json:"text"`
-	Images  []string `json:"images"`
-	Avatar  string   `json:"avatar"`
-	UserID  string   `json:"userId"`
-	Minutes *int     `json:"minutes"`
+	Type    string      `json:"type"`
+	Ticket  string      `json:"ticket"`
+	ID      string      `json:"id"`
+	Text    string      `json:"text"`
+	Images  []string    `json:"images"`
+	Avatar  string      `json:"avatar"`
+	UserID  string      `json:"userId"`
+	Minutes *int        `json:"minutes"`
+	Reply   *replyQuote `json:"reply,omitempty"`
 }
 
 type account struct {
@@ -40,12 +41,13 @@ type account struct {
 }
 
 type message struct {
-	Type   string   `json:"type"`
-	ID     string   `json:"id"`
-	Sender account  `json:"sender"`
-	Text   string   `json:"text"`
-	Images []string `json:"images"`
-	SentAt string   `json:"sentAt"`
+	Type   string      `json:"type"`
+	ID     string      `json:"id"`
+	Sender account     `json:"sender"`
+	Text   string      `json:"text"`
+	Images []string    `json:"images"`
+	SentAt string      `json:"sentAt"`
+	Reply  *replyQuote `json:"reply,omitempty"`
 }
 
 var errInvalid = errors.New("invalid lounge frame")
@@ -66,7 +68,7 @@ func validate(input incoming) error {
 	if total > maxTotalImageBytes {
 		return errInvalid
 	}
-	if validateAvatar(input.Avatar) != nil {
+	if validateAvatar(input.Avatar) != nil || validateReply(input.Reply) != nil {
 		return errInvalid
 	}
 	return nil

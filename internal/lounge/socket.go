@@ -29,7 +29,7 @@ func (h *hub) serve(c *gin.Context) {
 	}
 	h.clients[client] = false
 	h.mu.Unlock()
-	defer func() { client.close(); h.mu.Lock(); delete(h.clients, client); h.mu.Unlock() }()
+	defer h.remove(client)
 	conn.SetReadLimit(16 * 1024)
 	if conn.SetReadDeadline(time.Now().Add(10*time.Second)) != nil {
 		return
@@ -106,16 +106,19 @@ func (h *hub) authorize(client *peer, ticket string) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	client.user, client.expires = user, expires
+	client.moderator = value.Moderator
+	h.clients[client] = true
 	data, err := json.Marshal(struct {
-		Type   string  `json:"type"`
-		User   account `json:"user"`
-		Policy policy  `json:"policy"`
-	}{"ready", user, value})
+		Type        string  `json:"type"`
+		User        account `json:"user"`
+		Policy      policy  `json:"policy"`
+		OnlineCount *int    `json:"onlineCount,omitempty"`
+	}{"ready", user, value, h.onlineForLocked(value.Moderator)})
 	if err != nil {
 		return false
 	}
 	client.enqueue(data)
-	h.clients[client] = true
+	h.publishPresenceLocked(client)
 	client.conn.SetReadLimit(maxFrameBytes)
 	return true
 }
