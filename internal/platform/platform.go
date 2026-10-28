@@ -165,7 +165,9 @@ func Respond(c *gin.Context, value interface{}, err error) {
 			Fail(c, public.Status, public.Message)
 			return
 		}
-		slog.Error("request failed", "method", c.Request.Method, "path", c.FullPath(), "error", err)
+		if !IsLoungeRequest(c) {
+			slog.Error("request failed", "method", c.Request.Method, "path", c.FullPath(), "error", err)
+		}
 		c.AbortWithStatusJSON(500, gin.H{"statusCode": 500, "message": "Internal server error"})
 		return
 	}

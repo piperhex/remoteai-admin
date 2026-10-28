@@ -92,7 +92,21 @@ func cors() gin.HandlerFunc {
 }
 
 func recovery() gin.HandlerFunc {
-	return gin.CustomRecovery(func(c *gin.Context, recovered interface{}) {
+	handle := func(c *gin.Context, recovered interface{}) {
+		if c.Writer.Written() {
+			c.Abort()
+			return
+		}
 		c.AbortWithStatusJSON(500, gin.H{"statusCode": 500, "message": "Internal server error"})
-	})
+	}
+	standard := gin.CustomRecovery(handle)
+	// A nil writer also prevents Gin from constructing a request and stack dump.
+	private := gin.CustomRecoveryWithWriter(nil, handle)
+	return func(c *gin.Context) {
+		if platform.IsLoungeRequest(c) {
+			private(c)
+			return
+		}
+		standard(c)
+	}
 }

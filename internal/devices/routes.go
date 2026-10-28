@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/codex-switch/admin-go/internal/chatpush"
+	"github.com/codex-switch/admin-go/internal/lounge"
 	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/codex-switch/admin-go/internal/updatecache"
 	"github.com/gin-gonic/gin"
@@ -33,6 +34,11 @@ func Register(router *gin.Engine, deps *platform.Dependencies) (*Runtime, error)
 		return nil, err
 	}
 	runtime := &Runtime{control: gateway, chat: chat}
+	runtime.stopLounge, err = lounge.Register(router, deps)
+	if err != nil {
+		_ = runtime.Close()
+		return nil, err
+	}
 	gateway.revokeDesktopService = func(owner, id string) {
 		chat.mu.Lock()
 		defer chat.mu.Unlock()

@@ -98,7 +98,8 @@ func TestKongRoutesCoverRegisteredGoEndpoints(t *testing.T) {
 
 func TestKongRouteAuthenticationBoundaries(t *testing.T) {
 	services := readKongServices(t)
-	for _, path := range []string{"/sync/accounts", "/sync/ssh-profiles", "/sync/ssh-profiles/import",
+	for _, path := range []string{"/admin/api/lounge/users/example", "/lounge/ticket",
+		"/sync/accounts", "/sync/ssh-profiles", "/sync/ssh-profiles/import",
 		"/sync/ssh-profiles/example/credentials",
 		"/sync/ssh-profiles/example", "/admin/api/users", "/devices", "/official-usage",
 		"/devices/00000000-0000-4000-8000-000000000000/screen-power",
@@ -109,7 +110,7 @@ func TestKongRouteAuthenticationBoundaries(t *testing.T) {
 			t.Errorf("%s must use the account JWT route with expiry verification", path)
 		}
 	}
-	for _, path := range []string{"/auth/login", "/device-chat", "/device-switch", "/desktop-service/revoke",
+	for _, path := range []string{"/lounge/socket", "/auth/login", "/device-chat", "/device-switch", "/desktop-service/revoke",
 		"/help-assistant/settings", "/official-models", "/update-packages", "/update-sharing/settings",
 		"/update-packages/assets/652496018", "/update-packages/v2.0.2/Remote.AI_2.0.2_windows-x64-setup.exe",
 		"/admin-assets/app.js"} {
