@@ -81,31 +81,42 @@ func (h *hub) receive(client *peer, input incoming) bool {
 	if client.user.ID == "" || !client.expires.After(time.Now()) {
 		return false
 	}
-	if input.Type == "ping" {
+	switch input.Type {
+	case "ping":
 		client.enqueue([]byte(`{"type":"pong"}`))
 		return true
-	}
-	if input.Type == "moderate" {
-		if len(input.ID) == 0 || len(input.ID) > 80 {
-			return false
-		}
-		h.moderate(client, input)
-		return true
-	}
-	if input.Type == "watch" {
+	case "profile-watch":
+		return h.watchProfiles(client, input.Watch)
+	case "watch":
 		return h.watch(client, input.Watch)
-	}
-	if input.Type == "receipt" || input.Type == "receipt-confirm" {
+	case "receipt", "receipt-confirm":
 		return h.forwardReceipt(client, input)
+	case "message":
+		return h.receiveMessage(client, input)
+	default:
+		return h.receiveAction(client, input)
 	}
-	if input.Type == "block" {
-		if len(input.ID) == 0 || len(input.ID) > 80 {
-			return false
-		}
+}
+
+func (h *hub) receiveAction(client *peer, input incoming) bool {
+	if len(input.ID) == 0 || len(input.ID) > 80 {
+		return false
+	}
+	switch input.Type {
+	case "avatar":
+		h.saveAvatar(client, input)
+	case "moderate":
+		h.moderate(client, input)
+	case "block":
 		h.block(client, input)
-		return true
+	default:
+		return false
 	}
-	if input.Type != "message" || validate(input) != nil {
+	return true
+}
+
+func (h *hub) receiveMessage(client *peer, input incoming) bool {
+	if validate(input) != nil {
 		return false
 	}
 	if h.maySend(client, input.ID) {
@@ -133,6 +144,13 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 	if err != nil {
 		return false
 	}
+	profiles, err := h.readProfiles([]string{user.ID})
+	if err != nil {
+		return false
+	}
+	if len(profiles) != 0 {
+		user.Avatar = profiles[0].Avatar
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	client.user, client.expires = user, expires
@@ -141,6 +159,16 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 	client.receipts = input.Receipts
 	client.applyRelationships(privacy)
 	h.clients[client] = true
+	if !h.sendReadyLocked(client, value, privacy) {
+		return false
+	}
+	h.publishPresenceLocked(client)
+	h.publishContactPresenceLocked()
+	client.conn.SetReadLimit(maxFrameBytes)
+	return true
+}
+
+func (h *hub) sendReadyLocked(client *peer, value policy, privacy relationships) bool {
 	data, err := json.Marshal(struct {
 		Type        string    `json:"type"`
 		User        account   `json:"user"`
@@ -149,13 +177,11 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 		Direct      bool      `json:"direct"`
 		Blocked     []account `json:"blocked"`
 		Receipts    bool      `json:"receipts"`
-	}{"ready", user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true})
+		Profiles    bool      `json:"profiles"`
+	}{"ready", client.user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true, h.profiles != nil})
 	if err != nil {
 		return false
 	}
 	client.enqueue(data)
-	h.publishPresenceLocked(client)
-	h.publishContactPresenceLocked()
-	client.conn.SetReadLimit(maxFrameBytes)
 	return true
 }

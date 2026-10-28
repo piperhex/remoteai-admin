@@ -26,6 +26,7 @@ func Register(router *gin.Engine, deps *platform.Dependencies) (func(), error) {
 	hub := newHub(key)
 	hub.policies = postgresPolicies{db: deps.DB}
 	hub.relationships = postgresRelationships{db: deps.DB}
+	hub.profiles = postgresProfiles{db: deps.DB}
 	hub.directPolicy = postgresDirectPolicy{db: deps.DB}
 	hub.directKey = []byte(deps.Config.Get("KONG_JWT_SECRET", "change-me-kong-jwt-secret"))
 	hub.registerModeration(router, deps)

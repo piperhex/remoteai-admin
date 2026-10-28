@@ -70,7 +70,6 @@ func (h *hub) relayDirect(sender *peer, input incoming, target account) {
 		return
 	}
 	profile := sender.user
-	profile.Avatar = input.Avatar
 	data, err := json.Marshal(message{Type: "message", ID: input.ID, Sender: profile, Text: input.Text,
 		Images: input.Images, Reply: input.Reply, Recipient: &target, Receipts: input.Receipts,
 		SentAt: time.Now().UTC().Format(time.RFC3339Nano)})

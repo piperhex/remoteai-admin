@@ -10,7 +10,7 @@ import (
 const avatarSize = 48
 const maxAvatarBytes = 16 * 1024
 
-// Avatars travel with individual messages; no profile or image is stored on the server.
+// Both profile uploads and legacy message fields are limited to complete, small PNGs.
 func validateAvatar(data string) error {
 	if data == "" {
 		return nil
@@ -31,4 +31,25 @@ func validateAvatar(data string) error {
 		return errInvalid
 	}
 	return nil
+}
+
+// Re-encode just the bitmap so uploaded metadata and trailing bytes are never persisted.
+func canonicalAvatar(data string) (string, error) {
+	if err := validateAvatar(data); err != nil || data == "" {
+		return "", err
+	}
+	payload := strings.TrimPrefix(data, "data:image/png;base64,")
+	decoded, err := base64.StdEncoding.Strict().DecodeString(payload)
+	if err != nil {
+		return "", errInvalid
+	}
+	bitmap, err := png.Decode(bytes.NewReader(decoded))
+	if err != nil {
+		return "", errInvalid
+	}
+	var output bytes.Buffer
+	if err := png.Encode(&output, bitmap); err != nil || output.Len() > maxAvatarBytes {
+		return "", errInvalid
+	}
+	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(output.Bytes()), nil
 }

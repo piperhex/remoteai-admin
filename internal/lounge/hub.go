@@ -11,21 +11,22 @@ import (
 const maxQueuedBytes = 12 * 1024 * 1024
 
 type peer struct {
-	conn      *websocket.Conn
-	queue     chan []byte
-	done      chan struct{}
-	once      sync.Once
-	mu        sync.Mutex
-	queued    int
-	user      account
-	expires   time.Time
-	moderator bool // Guarded by hub.mu, including live permission revocation.
-	direct    bool
-	receipts  bool
-	blocks    map[string]bool
-	blockedBy map[string]bool
-	watching  map[string]bool
-	presence  map[string]*bool
+	conn         *websocket.Conn
+	queue        chan []byte
+	done         chan struct{}
+	once         sync.Once
+	mu           sync.Mutex
+	queued       int
+	user         account
+	expires      time.Time
+	moderator    bool // Guarded by hub.mu, including live permission revocation.
+	direct       bool
+	receipts     bool
+	blocks       map[string]bool
+	blockedBy    map[string]bool
+	watching     map[string]bool
+	presence     map[string]*bool
+	profileWatch map[string]bool
 }
 
 type hub struct {
@@ -39,6 +40,7 @@ type hub struct {
 	directPolicy  directPolicyRepository
 	directKey     []byte
 	settingsMu    sync.Mutex
+	profiles      profileRepository
 }
 
 func newHub(key []byte) *hub { return &hub{key: key, clients: make(map[*peer]bool)} }
@@ -97,15 +99,14 @@ func (p *peer) write() {
 }
 
 func (h *hub) broadcast(sender *peer, input incoming) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	profile := sender.user
-	profile.Avatar = input.Avatar
 	data, err := json.Marshal(message{Type: "message", ID: input.ID, Sender: profile,
 		Text: input.Text, Images: input.Images, Reply: input.Reply, SentAt: time.Now().UTC().Format(time.RFC3339Nano)})
 	if err != nil {
 		return
 	}
-	h.mu.Lock()
-	defer h.mu.Unlock()
 	// Only current authenticated connections receive this frame. There is no history, log, or replay store.
 	for client, authenticated := range h.clients {
 		if authenticated && client.expires.After(time.Now()) && !client.blocks[sender.user.ID] {
