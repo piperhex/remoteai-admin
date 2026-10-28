@@ -28,6 +28,7 @@ type incoming struct {
 	ID      string   `json:"id"`
 	Text    string   `json:"text"`
 	Images  []string `json:"images"`
+	Avatar  string   `json:"avatar"`
 	UserID  string   `json:"userId"`
 	Minutes *int     `json:"minutes"`
 }
@@ -35,6 +36,7 @@ type incoming struct {
 type account struct {
 	ID      string `json:"id"`
 	Account string `json:"account"`
+	Avatar  string `json:"avatar,omitempty"`
 }
 
 type message struct {
@@ -62,6 +64,9 @@ func validate(input incoming) error {
 		total += size
 	}
 	if total > maxTotalImageBytes {
+		return errInvalid
+	}
+	if validateAvatar(input.Avatar) != nil {
 		return errInvalid
 	}
 	return nil

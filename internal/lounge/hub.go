@@ -82,7 +82,9 @@ func (p *peer) write() {
 }
 
 func (h *hub) broadcast(sender *peer, input incoming) {
-	data, err := json.Marshal(message{Type: "message", ID: input.ID, Sender: sender.user,
+	profile := sender.user
+	profile.Avatar = input.Avatar
+	data, err := json.Marshal(message{Type: "message", ID: input.ID, Sender: profile,
 		Text: input.Text, Images: input.Images, SentAt: time.Now().UTC().Format(time.RFC3339Nano)})
 	if err != nil {
 		return
