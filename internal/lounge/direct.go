@@ -22,20 +22,22 @@ func (h *hub) direct(sender *peer, input incoming) {
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if !sender.direct || !sender.canContact(target.ID) {
+	if !sender.direct || !sender.canContact(target.ID) || input.Receipts && !sender.receipts {
 		h.reject(sender, input.ID, "client.lounge.directUnavailable")
 		return
 	}
 	profile := sender.user
 	profile.Avatar = input.Avatar
 	data, err := json.Marshal(message{Type: "message", ID: input.ID, Sender: profile, Text: input.Text,
-		Images: input.Images, Reply: input.Reply, Recipient: &target, SentAt: time.Now().UTC().Format(time.RFC3339Nano)})
+		Images: input.Images, Reply: input.Reply, Recipient: &target, Receipts: input.Receipts,
+		SentAt: time.Now().UTC().Format(time.RFC3339Nano)})
 	if err != nil {
 		return
 	}
 	delivered := false
 	for client := range h.clients {
-		if h.activeLocked(client) && client.direct && client.user.ID == target.ID && !client.blocks[sender.user.ID] {
+		if h.activeLocked(client) && client.direct && (!input.Receipts || client.receipts) &&
+			client.user.ID == target.ID && !client.blocks[sender.user.ID] {
 			delivered = client.enqueue(data) || delivered
 		}
 	}
@@ -44,7 +46,7 @@ func (h *hub) direct(sender *peer, input incoming) {
 		return
 	}
 	for client := range h.clients {
-		if h.activeLocked(client) && client.direct && client.user.ID == sender.user.ID {
+		if h.activeLocked(client) && client.direct && (!input.Receipts || client.receipts) && client.user.ID == sender.user.ID {
 			client.enqueue(data)
 		}
 	}

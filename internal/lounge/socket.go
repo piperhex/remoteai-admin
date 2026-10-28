@@ -40,22 +40,29 @@ func (h *hub) serve(c *gin.Context) {
 }
 
 func (h *hub) read(client *peer) {
-	window, count, bytes := time.Now(), 0, 0
+	window, count, receiptCount, bytes := time.Now(), 0, 0, 0
 	for {
 		kind, data, err := client.conn.ReadMessage()
 		if err != nil || kind != websocket.TextMessage {
 			return
 		}
 		if time.Since(window) >= 10*time.Second {
-			window, count, bytes = time.Now(), 0, 0
+			window, count, receiptCount, bytes = time.Now(), 0, 0, 0
 		}
-		count++
 		bytes += len(data)
-		if count > 30 || bytes > 2*maxFrameBytes {
+		if bytes > 2*maxFrameBytes {
 			return
 		}
 		var input incoming
 		if json.Unmarshal(data, &input) != nil {
+			return
+		}
+		if input.Type == "receipt" || input.Type == "receipt-confirm" {
+			receiptCount++
+		} else {
+			count++
+		}
+		if count > 30 || receiptCount > 240 {
 			return
 		}
 		if !h.receive(client, input) {
@@ -87,6 +94,9 @@ func (h *hub) receive(client *peer, input incoming) bool {
 	}
 	if input.Type == "watch" {
 		return h.watch(client, input.Watch)
+	}
+	if input.Type == "receipt" || input.Type == "receipt-confirm" {
+		return h.forwardReceipt(client, input)
 	}
 	if input.Type == "block" {
 		if len(input.ID) == 0 || len(input.ID) > 80 {
@@ -128,6 +138,7 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 	client.user, client.expires = user, expires
 	client.moderator = value.Moderator
 	client.direct = input.Direct
+	client.receipts = input.Receipts
 	client.applyRelationships(privacy)
 	h.clients[client] = true
 	data, err := json.Marshal(struct {
@@ -137,7 +148,8 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 		OnlineCount *int      `json:"onlineCount,omitempty"`
 		Direct      bool      `json:"direct"`
 		Blocked     []account `json:"blocked"`
-	}{"ready", user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked})
+		Receipts    bool      `json:"receipts"`
+	}{"ready", user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true})
 	if err != nil {
 		return false
 	}

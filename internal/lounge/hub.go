@@ -21,6 +21,7 @@ type peer struct {
 	expires   time.Time
 	moderator bool // Guarded by hub.mu, including live permission revocation.
 	direct    bool
+	receipts  bool
 	blocks    map[string]bool
 	blockedBy map[string]bool
 	watching  map[string]bool

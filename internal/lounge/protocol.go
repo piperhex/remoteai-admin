@@ -23,19 +23,21 @@ const (
 )
 
 type incoming struct {
-	Type    string      `json:"type"`
-	Ticket  string      `json:"ticket"`
-	ID      string      `json:"id"`
-	Text    string      `json:"text"`
-	Images  []string    `json:"images"`
-	Avatar  string      `json:"avatar"`
-	UserID  string      `json:"userId"`
-	Minutes *int        `json:"minutes"`
-	Reply   *replyQuote `json:"reply,omitempty"`
-	To      string      `json:"to,omitempty"`
-	Blocked *bool       `json:"blocked"`
-	Watch   []string    `json:"watch"`
-	Direct  bool        `json:"direct"`
+	Type     string      `json:"type"`
+	Ticket   string      `json:"ticket"`
+	ID       string      `json:"id"`
+	Text     string      `json:"text"`
+	Images   []string    `json:"images"`
+	Avatar   string      `json:"avatar"`
+	UserID   string      `json:"userId"`
+	Minutes  *int        `json:"minutes"`
+	Reply    *replyQuote `json:"reply,omitempty"`
+	To       string      `json:"to,omitempty"`
+	Blocked  *bool       `json:"blocked"`
+	Watch    []string    `json:"watch"`
+	Direct   bool        `json:"direct"`
+	Receipts bool        `json:"receipts"`
+	Status   string      `json:"status"`
 }
 
 type account struct {
@@ -53,6 +55,7 @@ type message struct {
 	SentAt    string      `json:"sentAt"`
 	Reply     *replyQuote `json:"reply,omitempty"`
 	Recipient *account    `json:"recipient,omitempty"`
+	Receipts  bool        `json:"receipts,omitempty"`
 }
 
 var errInvalid = errors.New("invalid lounge frame")
