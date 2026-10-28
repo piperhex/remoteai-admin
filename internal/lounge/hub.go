@@ -36,6 +36,8 @@ type hub struct {
 	closed        bool
 	presenceCount int
 	relationships relationshipRepository
+	directPolicy  directPolicyRepository
+	directKey     []byte
 	settingsMu    sync.Mutex
 }
 

@@ -65,6 +65,9 @@ var loungeModerationSchema string
 //go:embed 020_lounge_blocks.sql
 var loungeBlocksSchema string
 
+//go:embed 021_lounge_direct_permissions.sql
+var loungeDirectPermissionsSchema string
+
 // InitializeEmpty never changes existing tables, constraints, indexes, or customer data.
 // Existing deployments continue to apply the versioned apps/admin-go/sql migrations.
 func InitializeEmpty(db *gorm.DB) error {
@@ -135,6 +138,9 @@ func InitializeEmpty(db *gorm.DB) error {
 		if err := tx.Exec(loungeModerationSchema).Error; err != nil {
 			return err
 		}
-		return tx.Exec(loungeBlocksSchema).Error
+		if err := tx.Exec(loungeBlocksSchema).Error; err != nil {
+			return err
+		}
+		return tx.Exec(loungeDirectPermissionsSchema).Error
 	})
 }

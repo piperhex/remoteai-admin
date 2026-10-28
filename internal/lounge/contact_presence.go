@@ -1,6 +1,10 @@
 package lounge
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/google/uuid"
+)
 
 const maxWatchedContacts = 200
 
@@ -16,7 +20,7 @@ func (h *hub) watch(client *peer, ids []string) bool {
 	}
 	watching := make(map[string]bool, len(ids))
 	for _, id := range ids {
-		if id == "" || len(id) > 80 {
+		if _, err := uuid.Parse(id); err != nil {
 			return false
 		}
 		if id != client.user.ID {
@@ -24,9 +28,10 @@ func (h *hub) watch(client *peer, ids []string) bool {
 		}
 	}
 	h.mu.Lock()
-	defer h.mu.Unlock()
 	client.watching, client.presence = watching, nil
 	h.publishContactPresenceLocked()
+	h.mu.Unlock()
+	h.sendDirectPermissions(client.user.ID, ids)
 	return true
 }
 
