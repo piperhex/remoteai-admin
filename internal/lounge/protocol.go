@@ -27,6 +27,7 @@ type incoming struct {
 	Ticket     string      `json:"ticket"`
 	ID         string      `json:"id"`
 	Text       string      `json:"text"`
+	Query      string      `json:"query"`
 	Images     []string    `json:"images"`
 	Avatar     string      `json:"avatar"`
 	UserID     string      `json:"userId"`

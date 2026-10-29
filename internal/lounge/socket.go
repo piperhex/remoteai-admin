@@ -111,6 +111,8 @@ func (h *hub) receiveAction(client *peer, input incoming) bool {
 		h.block(client, input)
 	case "delete-direct":
 		h.deleteDirect(client, input)
+	case "lookup-account":
+		h.lookupAccount(client, input)
 	default:
 		return false
 	}
@@ -172,17 +174,18 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 
 func (h *hub) sendReadyLocked(client *peer, value policy, privacy relationships) bool {
 	data, err := json.Marshal(struct {
-		Type        string    `json:"type"`
-		User        account   `json:"user"`
-		Policy      policy    `json:"policy"`
-		OnlineCount *int      `json:"onlineCount,omitempty"`
-		Direct      bool      `json:"direct"`
-		Blocked     []account `json:"blocked"`
-		Receipts    bool      `json:"receipts"`
-		Profiles    bool      `json:"profiles"`
-		DirectReset bool      `json:"directReset"`
+		Type          string    `json:"type"`
+		User          account   `json:"user"`
+		Policy        policy    `json:"policy"`
+		OnlineCount   *int      `json:"onlineCount,omitempty"`
+		Direct        bool      `json:"direct"`
+		Blocked       []account `json:"blocked"`
+		Receipts      bool      `json:"receipts"`
+		Profiles      bool      `json:"profiles"`
+		DirectReset   bool      `json:"directReset"`
+		AccountLookup bool      `json:"accountLookup"`
 	}{"ready", client.user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true,
-		h.profiles != nil, h.directPolicy != nil})
+		h.profiles != nil, h.directPolicy != nil, h.accountLookup != nil})
 	if err != nil {
 		return false
 	}

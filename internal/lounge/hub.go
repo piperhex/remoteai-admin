@@ -41,6 +41,7 @@ type hub struct {
 	directKey     []byte
 	settingsMu    sync.Mutex
 	profiles      profileRepository
+	accountLookup accountLookupRepository
 }
 
 func newHub(key []byte) *hub { return &hub{key: key, clients: make(map[*peer]bool)} }
