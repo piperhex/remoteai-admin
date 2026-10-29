@@ -22,7 +22,8 @@ const goOnlyTables = ['token_cost_preset_settings', 'user_login_locks', 'chat_re
   'official_quota_v2_observations', 'official_quota_v2_declines',
   'synced_aggregates', 'update_sharing_settings', 'device_port_mappings', 'update_download_reports',
   'synced_ssh_profiles', 'lounge_user_policies', 'lounge_user_blocks',
-  'lounge_direct_permissions', 'lounge_profiles'];
+  'lounge_direct_permissions', 'lounge_profiles', 'lounge_nicknames',
+  'lounge_contact_remarks', 'lounge_notification_settings'];
 
 function docker(...args) {
   return execFileSync('docker', args, { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim();

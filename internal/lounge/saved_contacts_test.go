@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
@@ -11,14 +12,29 @@ import (
 )
 
 type savedContactsFixture struct {
+	mu            sync.Mutex
 	owner, cursor string
 	users         []account
 	err           error
 }
 
 func (s *savedContactsFixture) Page(_ context.Context, owner, cursor string) ([]account, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.owner, s.cursor = owner, cursor
 	return s.users, s.err
+}
+
+func (s *savedContactsFixture) request() (string, string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.owner, s.cursor
+}
+
+func (s *savedContactsFixture) respond(users []account, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.users, s.err = users, err
 }
 
 func TestSavedContactsAuthenticatedPaginationAndErrors(t *testing.T) {
@@ -27,25 +43,29 @@ func TestSavedContactsAuthenticatedPaginationAndErrors(t *testing.T) {
 	h.savedContacts = store
 	owner := uuid.NewString()
 	client := directConnection(t, h, url, owner)
+	var users []account
 	for index := range savedContactsPageSize + 1 {
-		store.users = append(store.users, account{ID: uuid.NewString(), Account: fmt.Sprintf("user%d@test", index)})
+		users = append(users, account{ID: uuid.NewString(), Account: fmt.Sprintf("user%d@test", index)})
 	}
+	store.respond(users, nil)
 	write(t, client, incoming{Type: "sync-contacts", ID: "page-one", UserID: uuid.NewString()})
 	page := read(t, client)
-	if store.owner != owner || page["id"] != "page-one" || len(page["users"].([]interface{})) != savedContactsPageSize {
+	requestOwner, _ := store.request()
+	if requestOwner != owner || page["id"] != "page-one" || len(page["users"].([]interface{})) != savedContactsPageSize {
 		t.Fatal("contact page was not scoped to the authenticated account", page)
 	}
-	cursor := store.users[savedContactsPageSize-1].ID
+	cursor := users[savedContactsPageSize-1].ID
 	if page["cursor"] != cursor {
 		t.Fatal("missing page cursor", page)
 	}
-	store.users = []account{store.users[savedContactsPageSize]}
+	store.respond(users[savedContactsPageSize:], nil)
 	write(t, client, incoming{Type: "sync-contacts", ID: "page-two", Cursor: cursor})
 	page = read(t, client)
-	if store.cursor != cursor || page["cursor"] != nil || len(page["users"].([]interface{})) != 1 {
+	_, requestCursor := store.request()
+	if requestCursor != cursor || page["cursor"] != nil || len(page["users"].([]interface{})) != 1 {
 		t.Fatal("incorrect final page", page)
 	}
-	store.err = errors.New("private database connection details")
+	store.respond(nil, errors.New("private database connection details"))
 	write(t, client, incoming{Type: "sync-contacts", ID: "failed"})
 	page = read(t, client)
 	if page["error"] != true || page["users"] != nil || len(page) != 4 {

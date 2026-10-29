@@ -24,6 +24,8 @@ const migrations = [
   '20261028-lounge-direct-permissions.sql',
   '20261028-lounge-profiles.sql',
   '20261029-lounge-direct-reset.sql',
+  '20261029-lounge-names.sql',
+  '20261029-lounge-notifications.sql',
 ];
 
 // The frozen Nest schema lacks Go additions; upgrade only the fixed localhost fixture database.
