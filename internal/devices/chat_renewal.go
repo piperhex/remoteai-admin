@@ -12,7 +12,8 @@ func (g *ChatGateway) renewAuthentication(client *peer, state *chatConnection, m
 	previous := state.identity
 	identity, err := g.authenticate(platform.JSON{"type": "authenticate", "role": previous.role,
 		"deviceId": previous.device, "accessToken": message["accessToken"],
-		"assistanceId": optionalAssistanceID(state.assistanceID), "assistingDeviceId": state.assistingDeviceID})
+		"transportVersion": float64(2),
+		"assistanceId":     optionalAssistanceID(state.assistanceID), "assistingDeviceId": state.assistingDeviceID})
 	if err != nil {
 		return err
 	}
@@ -55,6 +56,10 @@ func (g *ChatGateway) expireAuthentication(client *peer, state *chatConnection, 
 func (s *chatSessions) renew(client *peer, identity chatIdentity) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if identity.role == "lounge" {
+		s.renewLounge(client, identity)
+		return
+	}
 	if info, exists := s.info[client]; exists {
 		info.expires = identity.expires
 		s.info[client] = info

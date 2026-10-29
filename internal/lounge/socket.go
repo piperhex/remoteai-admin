@@ -196,8 +196,10 @@ func (h *hub) sendReadyLocked(client *peer, value policy, privacy relationships)
 		AccountLookup bool      `json:"accountLookup"`
 		Names         bool      `json:"names"`
 		SavedContacts bool      `json:"savedContacts"`
+		DeviceSync    bool      `json:"deviceSync"`
 	}{"ready", client.user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true,
-		h.profiles != nil, h.directPolicy != nil, h.accountLookup != nil, h.names != nil, h.savedContacts != nil})
+		h.profiles != nil, h.directPolicy != nil, h.accountLookup != nil, h.names != nil, h.savedContacts != nil,
+		h.directPolicy != nil})
 	if err != nil {
 		return false
 	}

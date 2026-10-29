@@ -2,11 +2,13 @@
 package platform
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/codex-switch/admin-go/internal/bandwidth"
 	"github.com/gin-gonic/gin"
@@ -41,6 +43,8 @@ type Principal struct {
 }
 
 type Dependencies struct {
+	LoungeIdentity    func(string) (string, time.Time, error)
+	LoungeGenerations func(context.Context, string, []string) (map[string]int64, error)
 	DB                *gorm.DB
 	Redis             *redis.Client
 	Config            Config

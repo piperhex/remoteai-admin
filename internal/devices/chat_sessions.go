@@ -17,6 +17,7 @@ type desktopInfo struct {
 	assistance bool
 }
 type chatSessions struct {
+	lounge     map[*peer]loungePeer
 	mu         sync.Mutex
 	desktops   map[string]*peer
 	info       map[*peer]desktopInfo
@@ -30,6 +31,7 @@ type chatSessions struct {
 
 func newChatSessions(relay func(int)) *chatSessions {
 	return &chatSessions{desktops: map[string]*peer{}, info: map[*peer]desktopInfo{},
+		lounge:   map[*peer]loungePeer{},
 		sessions: map[string]*chatSession{}, hot: newHotSessions(relay), onRelay: relay,
 		assistance: map[string]*assistanceRequest{}}
 }
@@ -44,6 +46,9 @@ func (s *chatSessions) join(client *peer, identity chatIdentity, message platfor
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.hot.prune()
+	if identity.role == "lounge" {
+		return s.joinLounge(client, identity, message, ice)
+	}
 	key := identity.owner + ":" + identity.device
 	version := desktopTransportVersion(message["transportVersion"])
 	if identity.role == "desktop" {
@@ -158,6 +163,11 @@ func (s *chatSessions) routeLegacy(client *peer, message platform.JSON) error {
 		return err
 	}
 	session := s.sessions[id]
+	if _, lounge := s.lounge[client]; lounge && session == nil &&
+		(message["type"] == "relay" || message["type"] == "signal") {
+		// A peer departure can race encrypted frames already in flight; keep the other device pairs alive.
+		return nil
+	}
 	if session == nil || (session.desktop != client && session.mobile != client) {
 		return errors.New("unknown session")
 	}
@@ -212,6 +222,7 @@ func (s *chatSessions) disconnect(client *peer, revoke bool) {
 }
 
 func (s *chatSessions) disconnectLocked(client *peer, revoke bool) {
+	delete(s.lounge, client)
 	s.hot.disconnect(client, revoke)
 	delete(s.info, client)
 	for key, desktop := range s.desktops {

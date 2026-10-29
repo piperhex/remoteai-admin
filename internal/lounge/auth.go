@@ -1,6 +1,7 @@
 package lounge
 
 import (
+	"context"
 	"crypto/rand"
 	"net/http"
 	"time"
@@ -31,6 +32,14 @@ func Register(router *gin.Engine, deps *platform.Dependencies) (func(), error) {
 	hub.names = postgresNames{db: deps.DB}
 	hub.directPolicy = postgresDirectPolicy{db: deps.DB}
 	hub.savedContacts = postgresSavedContacts{db: deps.DB}
+	deps.LoungeIdentity = func(ticket string) (string, time.Time, error) {
+		user, expires, err := hub.authenticate(ticket)
+		return user.ID, expires, err
+	}
+	deps.LoungeGenerations = func(ctx context.Context, owner string, peers []string) (map[string]int64, error) {
+		states, err := hub.directPolicy.States(ctx, owner, peers)
+		return states.Generations, err
+	}
 	hub.directKey = []byte(deps.Config.Get("KONG_JWT_SECRET", "change-me-kong-jwt-secret"))
 	hub.registerModeration(router, deps)
 	router.POST("/lounge/ticket", deps.RequireAuth(), hub.ticket)
