@@ -52,6 +52,7 @@ func concurrentPolicyDB(t *testing.T) *gorm.DB {
 	if err := db.Exec(string(migration)).Error; err != nil {
 		t.Fatal(err)
 	}
+	applyDirectResetSchema(t, db)
 	return db
 }
 

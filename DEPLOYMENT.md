@@ -7,10 +7,16 @@
 ## 在线交流（2026-10-28）
 
 先依次执行 `sql/20261028-lounge-moderation.sql`、`sql/20261028-lounge-blocks.sql`、
-`sql/20261028-lounge-direct-permissions.sql` 和 `sql/20261028-lounge-profiles.sql`，
+`sql/20261028-lounge-direct-permissions.sql`、`sql/20261028-lounge-profiles.sql` 和
+`sql/20261029-lounge-direct-reset.sql`，
 再使用本文的 `deployment_compose.py check/up/verify` 流程更新 admin-go，并同步更新各端客户端。
 新表仅保存当前聊天管理员权限、禁言到期时间、用户屏蔽关系、双方的私聊发送权限和当前账户头像，
 不保存消息、聊天图片附件、客户端联系人列表、在线状态或操作历史。回滚只使用已验证的 Go 镜像，保留这些设置表。
+
+删除私聊需要支持 `directReset` 的新版服务端。删除时清理当前设备的联系人与私聊记录，
+同时重置双方的发送权限；新的私聊需要双方各发送一条消息后才能继续发送。
+当前权限版本会使删除前的排队消息失效，避免旧设备重发消息恢复已删除的会话。
+升级时必须同步更新客户端；旧客户端不理解重置后的权限版本，无法继续该私聊。
 
 将 `/lounge/ticket` 加入现有 Kong 账户 JWT 路由；将 `/lounge/socket` 加入无 Kong JWT 插件的路由，
 两者均保持 `strip_path: false`。后者由 Go 校验首帧中的短期专用票据，URL 不携带账户令牌。

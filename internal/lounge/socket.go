@@ -109,6 +109,8 @@ func (h *hub) receiveAction(client *peer, input incoming) bool {
 		h.moderate(client, input)
 	case "block":
 		h.block(client, input)
+	case "delete-direct":
+		h.deleteDirect(client, input)
 	default:
 		return false
 	}
@@ -178,7 +180,9 @@ func (h *hub) sendReadyLocked(client *peer, value policy, privacy relationships)
 		Blocked     []account `json:"blocked"`
 		Receipts    bool      `json:"receipts"`
 		Profiles    bool      `json:"profiles"`
-	}{"ready", client.user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true, h.profiles != nil})
+		DirectReset bool      `json:"directReset"`
+	}{"ready", client.user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true,
+		h.profiles != nil, h.directPolicy != nil})
 	if err != nil {
 		return false
 	}

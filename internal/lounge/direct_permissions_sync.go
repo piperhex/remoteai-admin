@@ -17,8 +17,8 @@ func (h *hub) sendDirectPermissions(user string, peers []string) {
 		return // Sending still fails closed in Admit; never log storage details or contact identities.
 	}
 	data, err := json.Marshal(struct {
-		Type   string            `json:"type"`
-		States map[string]string `json:"states"`
+		Type string `json:"type"`
+		directStates
 	}{"direct-permissions", states})
 	if err != nil {
 		return

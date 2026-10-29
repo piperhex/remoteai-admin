@@ -40,6 +40,10 @@ func (h *hub) direct(sender *peer, input incoming) {
 			if errors.Is(err, errAwaitingReply) {
 				code = awaitingReply
 			}
+			if errors.Is(err, errDirectReset) {
+				code = errDirectReset.Error()
+				h.sendDirectPermissions(sender.user.ID, []string{target.ID})
+			}
 			h.reject(sender, input.ID, code)
 			return
 		}
@@ -71,7 +75,7 @@ func (h *hub) relayDirect(sender *peer, input incoming, target account) {
 	}
 	profile := sender.user
 	data, err := json.Marshal(message{Type: "message", ID: input.ID, Sender: profile, Text: input.Text,
-		Images: input.Images, Reply: input.Reply, Recipient: &target, Receipts: input.Receipts,
+		Images: input.Images, Reply: input.Reply, Recipient: &target, Receipts: input.Receipts, Generation: input.Generation,
 		SentAt: time.Now().UTC().Format(time.RFC3339Nano)})
 	if err != nil {
 		return

@@ -31,6 +31,7 @@ func directPolicyDB(t *testing.T) *gorm.DB {
 			t.Fatal(err)
 		}
 	}
+	applyDirectResetSchema(t, db)
 	return db
 }
 
@@ -107,7 +108,7 @@ func assertPermissionColumns(t *testing.T, db *gorm.DB) {
 		Scan(&columns).Error; err != nil {
 		t.Fatal(err)
 	}
-	if strings.Join(columns, ",") != "first_user,second_user,initiator,fingerprint" {
+	if strings.Join(columns, ",") != "first_user,second_user,initiator,fingerprint,generation,fresh" {
 		t.Fatal("unexpected content or event storage", columns)
 	}
 }
