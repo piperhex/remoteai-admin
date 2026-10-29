@@ -58,6 +58,10 @@ func (h *hub) lookupAccount(client *peer, input incoming) {
 		h.reject(client, input.ID, code)
 		return
 	}
+	if h.readNickname(&users[0]) != nil {
+		h.reject(client, input.ID, "client.lounge.accountLookupFailed")
+		return
+	}
 	data, err := json.Marshal(struct {
 		Type string  `json:"type"`
 		ID   string  `json:"id"`

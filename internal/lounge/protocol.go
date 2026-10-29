@@ -30,6 +30,8 @@ type incoming struct {
 	Query      string      `json:"query"`
 	Images     []string    `json:"images"`
 	Avatar     string      `json:"avatar"`
+	Nickname   string      `json:"nickname"`
+	Remark     string      `json:"remark"`
 	UserID     string      `json:"userId"`
 	Minutes    *int        `json:"minutes"`
 	Reply      *replyQuote `json:"reply,omitempty"`
@@ -44,9 +46,10 @@ type incoming struct {
 }
 
 type account struct {
-	ID      string `json:"id"`
-	Account string `json:"account"`
-	Avatar  string `json:"avatar,omitempty"`
+	ID       string `json:"id"`
+	Account  string `json:"account"`
+	Avatar   string `json:"avatar,omitempty"`
+	Nickname string `json:"nickname,omitempty"`
 }
 
 type message struct {

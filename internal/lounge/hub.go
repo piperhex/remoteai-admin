@@ -42,6 +42,7 @@ type hub struct {
 	directKey     []byte
 	settingsMu    sync.Mutex
 	profiles      profileRepository
+	names         nameRepository
 	accountLookup accountLookupRepository
 }
 

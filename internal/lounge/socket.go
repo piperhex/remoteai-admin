@@ -105,6 +105,10 @@ func (h *hub) receiveAction(client *peer, input incoming) bool {
 	switch input.Type {
 	case "avatar":
 		h.saveAvatar(client, input)
+	case "nickname":
+		h.saveNickname(client, input)
+	case "remark":
+		h.saveRemark(client, input)
 	case "moderate":
 		h.moderate(client, input)
 	case "block":
@@ -155,6 +159,9 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 	if len(profiles) != 0 {
 		user.Avatar = profiles[0].Avatar
 	}
+	if h.readNickname(&user) != nil {
+		return false
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	client.user, client.expires = user, expires
@@ -185,8 +192,9 @@ func (h *hub) sendReadyLocked(client *peer, value policy, privacy relationships)
 		Profiles      bool      `json:"profiles"`
 		DirectReset   bool      `json:"directReset"`
 		AccountLookup bool      `json:"accountLookup"`
+		Names         bool      `json:"names"`
 	}{"ready", client.user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true,
-		h.profiles != nil, h.directPolicy != nil, h.accountLookup != nil})
+		h.profiles != nil, h.directPolicy != nil, h.accountLookup != nil, h.names != nil})
 	if err != nil {
 		return false
 	}

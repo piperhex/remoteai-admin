@@ -46,10 +46,17 @@ func (h *hub) watchProfiles(client *peer, ids []string) bool {
 	if err != nil {
 		return false
 	}
+	names, err := h.watchedNames(client, ids)
+	if err != nil {
+		return false
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	client.profileWatch = watching
 	sendProfiles(client, profiles)
+	if h.names != nil {
+		sendNames(client, names)
+	}
 	return true
 }
 
