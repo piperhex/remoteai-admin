@@ -173,6 +173,7 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	client.user, client.expires = user, expires
+	client.user.Moderator = value.Moderator
 	client.moderator = value.Moderator
 	client.direct = input.Direct
 	client.receipts = input.Receipts

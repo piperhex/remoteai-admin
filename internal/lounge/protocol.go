@@ -49,10 +49,11 @@ type incoming struct {
 }
 
 type account struct {
-	ID       string `json:"id"`
-	Account  string `json:"account"`
-	Avatar   string `json:"avatar,omitempty"`
-	Nickname string `json:"nickname,omitempty"`
+	ID        string `json:"id"`
+	Account   string `json:"account"`
+	Avatar    string `json:"avatar,omitempty"`
+	Nickname  string `json:"nickname,omitempty"`
+	Moderator bool   `json:"moderator"`
 }
 
 type message struct {

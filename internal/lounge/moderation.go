@@ -65,6 +65,7 @@ func (h *hub) notifyPolicy(user string, value policy) {
 	for client := range h.clients {
 		if client.user.ID == user {
 			client.moderator = value.Moderator
+			client.user.Moderator = value.Moderator
 			client.enqueue(data)
 		}
 	}
