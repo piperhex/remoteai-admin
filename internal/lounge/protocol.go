@@ -38,6 +38,7 @@ type incoming struct {
 	Watch      []string    `json:"watch"`
 	Direct     bool        `json:"direct"`
 	Receipts   bool        `json:"receipts"`
+	GroupAcks  bool        `json:"groupAcks"`
 	Status     string      `json:"status"`
 	Generation int64       `json:"generation,omitempty"`
 }

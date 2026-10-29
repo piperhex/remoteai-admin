@@ -22,6 +22,7 @@ type peer struct {
 	moderator    bool // Guarded by hub.mu, including live permission revocation.
 	direct       bool
 	receipts     bool
+	groupAcks    bool
 	blocks       map[string]bool
 	blockedBy    map[string]bool
 	watching     map[string]bool
@@ -103,13 +104,30 @@ func (h *hub) broadcast(sender *peer, input incoming) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	profile := sender.user
+	sentAt := time.Now().UTC().Format(time.RFC3339Nano)
+	// Confirm validation before fan-out, without sending uploaded images back over the sender's connection.
+	// Older clients still use their full message echo as confirmation.
+	if sender.groupAcks {
+		ack, err := json.Marshal(struct {
+			Type   string `json:"type"`
+			ID     string `json:"id"`
+			SentAt string `json:"sentAt"`
+		}{"accepted", input.ID, sentAt})
+		if err != nil {
+			return
+		}
+		sender.enqueue(ack)
+	}
 	data, err := json.Marshal(message{Type: "message", ID: input.ID, Sender: profile,
-		Text: input.Text, Images: input.Images, Reply: input.Reply, SentAt: time.Now().UTC().Format(time.RFC3339Nano)})
+		Text: input.Text, Images: input.Images, Reply: input.Reply, SentAt: sentAt})
 	if err != nil {
 		return
 	}
 	// Only current authenticated connections receive this frame. There is no history, log, or replay store.
 	for client, authenticated := range h.clients {
+		if client == sender && sender.groupAcks {
+			continue
+		}
 		if authenticated && client.expires.After(time.Now()) && !client.blocks[sender.user.ID] {
 			client.enqueue(data)
 		}

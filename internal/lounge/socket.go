@@ -161,6 +161,7 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 	client.moderator = value.Moderator
 	client.direct = input.Direct
 	client.receipts = input.Receipts
+	client.groupAcks = input.GroupAcks
 	client.applyRelationships(privacy)
 	h.clients[client] = true
 	if !h.sendReadyLocked(client, value, privacy) {
