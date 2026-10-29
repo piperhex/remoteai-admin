@@ -29,6 +29,7 @@ var apiPrefixes = []string{
 	"/device-switch",
 	"/device-chat",
 	"/skills",
+	"/provider-market",
 	"/prompt-plugins",
 	"/codex-home-presets",
 }

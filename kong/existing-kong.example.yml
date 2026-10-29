@@ -39,6 +39,8 @@ services:
           - /desktop-service/revoke
           - /prompt-plugins
           - /skills
+          # Public browsing; writes require account authentication inside admin-go.
+          - /provider-market
           - /codex-home-presets
           - /chat/title-settings
         strip_path: false

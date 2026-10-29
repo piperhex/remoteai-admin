@@ -10,6 +10,10 @@ func (contract *Contract) extendProviderSyncContract() {
 		Rules: []Rule{{Name: "IsObject"}, {Name: "IsOptional"}},
 	})
 	contract.Schemas["SyncProviderDto"] = provider
+	provider.Fields = append(provider.Fields, Field{
+		Name: "balanceScript", Rules: []Rule{{Name: "IsObject"}, {Name: "IsOptional"}},
+	})
+	contract.Schemas["SyncProviderDto"] = provider
 
 	versions := contract.Schemas["ProviderFieldModifiedAtDto"]
 	versions.Fields = append(versions.Fields, Field{
@@ -18,6 +22,13 @@ func (contract *Contract) extendProviderSyncContract() {
 			{Name: "MaxLength", Args: []interface{}{float64(providerFieldTimestampMaxLength)}},
 			{Name: "IsString"},
 			{Name: "IsOptional"},
+		},
+	})
+	contract.Schemas["ProviderFieldModifiedAtDto"] = versions
+	versions.Fields = append(versions.Fields, Field{
+		Name: "balanceScript", Rules: []Rule{
+			{Name: "MaxLength", Args: []interface{}{float64(providerFieldTimestampMaxLength)}},
+			{Name: "IsString"}, {Name: "IsOptional"},
 		},
 	})
 	contract.Schemas["ProviderFieldModifiedAtDto"] = versions

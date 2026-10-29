@@ -29,6 +29,7 @@ func catalog() permissionCatalog {
 		panic(err)
 	}
 	addUpdateSharingPermissions(&result)
+	addProviderMarketPermissions(&result)
 	return result
 }
 
