@@ -132,6 +132,10 @@ func (h *hub) receiveMessage(client *peer, input incoming) bool {
 		return false
 	}
 	if h.maySend(client, input.ID) {
+		if err := h.prepareAttachments(client, &input); err != nil {
+			h.reject(client, input.ID, "client.lounge.attachmentLimit")
+			return true
+		}
 		if input.To != "" {
 			h.direct(client, input)
 		} else {
@@ -206,9 +210,10 @@ func (h *hub) sendReadyLocked(client *peer, value policy, privacy relationships,
 		DeviceSync           bool      `json:"deviceSync"`
 		NotificationSettings bool      `json:"notificationSettings"`
 		MutedConversations   []string  `json:"mutedConversations"`
+		Attachments          bool      `json:"attachments"`
 	}{"ready", client.user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true,
 		h.profiles != nil, h.directPolicy != nil, h.accountLookup != nil, h.names != nil, h.savedContacts != nil,
-		h.directPolicy != nil, h.notifications != nil, muted})
+		h.directPolicy != nil, h.notifications != nil, muted, h.attachmentPolicy != nil})
 	if err != nil {
 		return false
 	}

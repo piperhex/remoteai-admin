@@ -33,6 +33,7 @@ func Register(router *gin.Engine, deps *platform.Dependencies) (func(), error) {
 	hub.directPolicy = postgresDirectPolicy{db: deps.DB}
 	hub.savedContacts = postgresSavedContacts{db: deps.DB}
 	hub.notifications = postgresNotifications{db: deps.DB}
+	hub.registerAttachments(deps)
 	deps.LoungeIdentity = func(ticket string) (string, time.Time, error) {
 		user, expires, err := hub.authenticate(ticket)
 		return user.ID, expires, err

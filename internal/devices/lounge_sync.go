@@ -13,8 +13,9 @@ const maxLoungeDevices = 16
 const maxHistoryPeers = 50
 
 type loungePeer struct {
-	identity chatIdentity
-	key      string
+	identity    chatIdentity
+	key         string
+	attachments bool
 }
 
 // A lounge ticket grants only same-account history pairing, never control of a registered computer.
@@ -46,9 +47,13 @@ func (s *chatSessions) joinLounge(client *peer, identity chatIdentity, message p
 	if len(others) >= maxLoungeDevices {
 		return errors.New("too many lounge devices")
 	}
-	s.lounge[client] = loungePeer{identity, key}
+	attachments := message["purpose"] == "attachments"
+	s.lounge[client] = loungePeer{identity, key, attachments}
 	client.send(platform.JSON{"type": "sync-registered", "expiresAt": identity.expires.UnixMilli()}, nil)
 	for other, info := range others {
+		if attachments || info.attachments {
+			continue
+		}
 		id := uuid.NewString()
 		s.sessions[id] = &chatSession{id: id, owner: identity.owner, desktop: other, mobile: client,
 			started: time.Now(), relay: true}

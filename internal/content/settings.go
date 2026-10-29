@@ -145,6 +145,9 @@ const DefaultChatSessionLimit = 5
 const maxFileDownloadWindowSize = 12
 
 var policyFields = []policyField{
+	{Name: "loungeFileMaxMb", Minimum: 1, Default: 300, Optional: true},
+	{Name: "loungeGroupImageMaxMb", Minimum: 1, Default: 1, Optional: true},
+	{Name: "loungeDirectImageMaxMb", Minimum: 1, Default: 1, Optional: true},
 	{Name: "chatSessionLimit", Minimum: 1, Default: DefaultChatSessionLimit, Optional: true},
 	{Name: "p2pNegotiationTimeoutSeconds", Minimum: 1, Default: 45, Optional: true},
 	{Name: "p2pRetryIntervalSeconds", Minimum: 1, Default: 10, Optional: true},

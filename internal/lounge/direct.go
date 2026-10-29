@@ -92,7 +92,8 @@ func (h *hub) relayDirect(sender *peer, input incoming, target account) bool {
 	}
 	profile := sender.user
 	data, err := json.Marshal(message{Type: "message", ID: input.ID, Sender: profile, Text: input.Text,
-		Images: input.Images, Reply: input.Reply, Recipient: &target, Receipts: input.Receipts, Generation: input.Generation,
+		Images: input.Images, Attachments: input.Attachments, Reply: input.Reply,
+		Recipient: &target, Receipts: input.Receipts, Generation: input.Generation,
 		SentAt: time.Now().UTC().Format(time.RFC3339Nano)})
 	if err != nil {
 		return false

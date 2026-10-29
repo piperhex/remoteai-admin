@@ -31,21 +31,22 @@ type peer struct {
 }
 
 type hub struct {
-	policies      policyRepository
-	key           []byte
-	mu            sync.Mutex
-	clients       map[*peer]bool
-	closed        bool
-	presenceCount int
-	relationships relationshipRepository
-	directPolicy  directPolicyRepository
-	directKey     []byte
-	settingsMu    sync.Mutex
-	profiles      profileRepository
-	names         nameRepository
-	accountLookup accountLookupRepository
-	savedContacts savedContactRepository
-	notifications notificationRepository
+	attachmentPolicy func() (map[string]interface{}, error)
+	policies         policyRepository
+	key              []byte
+	mu               sync.Mutex
+	clients          map[*peer]bool
+	closed           bool
+	presenceCount    int
+	relationships    relationshipRepository
+	directPolicy     directPolicyRepository
+	directKey        []byte
+	settingsMu       sync.Mutex
+	profiles         profileRepository
+	names            nameRepository
+	accountLookup    accountLookupRepository
+	savedContacts    savedContactRepository
+	notifications    notificationRepository
 }
 
 func newHub(key []byte) *hub { return &hub{key: key, clients: make(map[*peer]bool)} }
@@ -112,17 +113,18 @@ func (h *hub) broadcast(sender *peer, input incoming) {
 	// Older clients still use their full message echo as confirmation.
 	if sender.groupAcks {
 		ack, err := json.Marshal(struct {
-			Type   string `json:"type"`
-			ID     string `json:"id"`
-			SentAt string `json:"sentAt"`
-		}{"accepted", input.ID, sentAt})
+			Type        string       `json:"type"`
+			ID          string       `json:"id"`
+			SentAt      string       `json:"sentAt"`
+			Attachments []attachment `json:"attachments,omitempty"`
+		}{"accepted", input.ID, sentAt, input.Attachments})
 		if err != nil {
 			return
 		}
 		sender.enqueue(ack)
 	}
 	data, err := json.Marshal(message{Type: "message", ID: input.ID, Sender: profile,
-		Text: input.Text, Images: input.Images, Reply: input.Reply, SentAt: sentAt})
+		Text: input.Text, Images: input.Images, Attachments: input.Attachments, Reply: input.Reply, SentAt: sentAt})
 	if err != nil {
 		return
 	}

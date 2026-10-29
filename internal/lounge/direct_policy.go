@@ -122,12 +122,17 @@ func (h *hub) directPermission(sender string, input incoming) (directPermission,
 	if input.Images == nil {
 		input.Images = []string{}
 	}
+	files := append([]attachment(nil), input.Attachments...)
+	for index := range files {
+		files[index].Grant = ""
+	}
 	// Do not include transport flags or avatar: they may change during an otherwise identical retry.
 	data, err := json.Marshal(struct {
-		ID, Text string
-		Images   []string
-		Reply    *replyQuote
-	}{input.ID, input.Text, input.Images, input.Reply})
+		ID, Text    string
+		Images      []string
+		Reply       *replyQuote
+		Attachments []attachment `json:",omitempty"`
+	}{input.ID, input.Text, input.Images, input.Reply, files})
 	if err != nil {
 		return request, err
 	}

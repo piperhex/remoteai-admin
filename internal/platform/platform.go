@@ -44,6 +44,7 @@ type Principal struct {
 
 type Dependencies struct {
 	LoungeIdentity    func(string) (string, time.Time, error)
+	LoungeAttachment  func(string, string) (string, string, string, error)
 	LoungeGenerations func(context.Context, string, []string) (map[string]int64, error)
 	DB                *gorm.DB
 	Redis             *redis.Client
