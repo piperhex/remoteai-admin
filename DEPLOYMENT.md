@@ -8,10 +8,18 @@
 
 先依次执行 `sql/20261028-lounge-moderation.sql`、`sql/20261028-lounge-blocks.sql`、
 `sql/20261028-lounge-direct-permissions.sql`、`sql/20261028-lounge-profiles.sql`、
-`sql/20261029-lounge-direct-reset.sql` 和 `sql/20261029-lounge-names.sql`，
+`sql/20261029-lounge-direct-reset.sql`、`sql/20261029-lounge-names.sql` 和
+`sql/20261029-lounge-notifications.sql`，
 再使用本文的 `deployment_compose.py check/up/verify` 流程更新 admin-go，并同步更新各端客户端。
-新表仅保存当前聊天管理员权限、禁言到期时间、用户屏蔽关系、双方的私聊发送权限、头像、昵称和私人备注，
+新表仅保存当前聊天管理员权限、禁言到期时间、用户屏蔽关系、双方的私聊发送权限、头像、昵称、私人备注和免打扰设置，
 不保存消息、聊天图片附件、在线状态或操作历史。回滚只使用已验证的 Go 镜像，保留这些设置表。
+
+`ready.notificationSettings` 声明支持免打扰，`ready.mutedConversations` 返回该用户的当前设置。
+客户端通过已认证的 `notification-setting` 帧设置 `conversation` 和 `muted`；空会话标识表示群聊，
+私聊使用对方的账户 ID。设置保存到 `lounge_notification_settings` 后，以 `notification-settings` 帧
+同步到本实例中该用户的所有在线终端，再确认保存成功；重连和票据续期会重新读取数据库。
+此设置不影响消息投递、未读回执或其他参与者，仅排除入口角标计数；聊天列表头像始终保留未读数，超过 99 显示 `99+`。
+复用现有 `/lounge/socket`，无需新增 HTTP 或 Kong 路由。旧服务端禁用该菜单项，不回退到仅本机保存。
 
 新版 `ready.savedContacts` 声明支持私聊联系人恢复。客户端使用已认证连接发送 `sync-contacts`，
 服务端从现有 `lounge_direct_permissions` 中读取双方已经互发消息、尚未删除的关系，

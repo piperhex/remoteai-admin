@@ -45,6 +45,7 @@ type hub struct {
 	names         nameRepository
 	accountLookup accountLookupRepository
 	savedContacts savedContactRepository
+	notifications notificationRepository
 }
 
 func newHub(key []byte) *hub { return &hub{key: key, clients: make(map[*peer]bool)} }

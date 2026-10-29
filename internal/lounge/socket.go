@@ -107,6 +107,8 @@ func (h *hub) receiveAction(client *peer, input incoming) bool {
 	switch input.Type {
 	case "avatar":
 		h.saveAvatar(client, input)
+	case "notification-setting":
+		h.saveNotificationSetting(client, input)
 	case "nickname":
 		h.saveNickname(client, input)
 	case "remark":
@@ -164,6 +166,10 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 	if h.readNickname(&user) != nil {
 		return false
 	}
+	muted, err := h.mutedConversations(user.ID)
+	if err != nil {
+		return false
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	client.user, client.expires = user, expires
@@ -173,7 +179,7 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 	client.groupAcks = input.GroupAcks
 	client.applyRelationships(privacy)
 	h.clients[client] = true
-	if !h.sendReadyLocked(client, value, privacy) {
+	if !h.sendReadyLocked(client, value, privacy, muted) {
 		return false
 	}
 	h.publishPresenceLocked(client)
@@ -182,24 +188,26 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 	return true
 }
 
-func (h *hub) sendReadyLocked(client *peer, value policy, privacy relationships) bool {
+func (h *hub) sendReadyLocked(client *peer, value policy, privacy relationships, muted []string) bool {
 	data, err := json.Marshal(struct {
-		Type          string    `json:"type"`
-		User          account   `json:"user"`
-		Policy        policy    `json:"policy"`
-		OnlineCount   *int      `json:"onlineCount,omitempty"`
-		Direct        bool      `json:"direct"`
-		Blocked       []account `json:"blocked"`
-		Receipts      bool      `json:"receipts"`
-		Profiles      bool      `json:"profiles"`
-		DirectReset   bool      `json:"directReset"`
-		AccountLookup bool      `json:"accountLookup"`
-		Names         bool      `json:"names"`
-		SavedContacts bool      `json:"savedContacts"`
-		DeviceSync    bool      `json:"deviceSync"`
+		Type                 string    `json:"type"`
+		User                 account   `json:"user"`
+		Policy               policy    `json:"policy"`
+		OnlineCount          *int      `json:"onlineCount,omitempty"`
+		Direct               bool      `json:"direct"`
+		Blocked              []account `json:"blocked"`
+		Receipts             bool      `json:"receipts"`
+		Profiles             bool      `json:"profiles"`
+		DirectReset          bool      `json:"directReset"`
+		AccountLookup        bool      `json:"accountLookup"`
+		Names                bool      `json:"names"`
+		SavedContacts        bool      `json:"savedContacts"`
+		DeviceSync           bool      `json:"deviceSync"`
+		NotificationSettings bool      `json:"notificationSettings"`
+		MutedConversations   []string  `json:"mutedConversations"`
 	}{"ready", client.user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true,
 		h.profiles != nil, h.directPolicy != nil, h.accountLookup != nil, h.names != nil, h.savedContacts != nil,
-		h.directPolicy != nil})
+		h.directPolicy != nil, h.notifications != nil, muted})
 	if err != nil {
 		return false
 	}
