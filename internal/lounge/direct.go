@@ -30,27 +30,44 @@ func (h *hub) direct(sender *peer, input incoming) {
 		h.reject(sender, input.ID, "client.lounge.directUnavailable")
 		return
 	}
-	if h.directPolicy != nil {
-		permission, err := h.directPermission(sender.user.ID, input)
-		if err == nil {
-			err = h.directPolicy.Admit(ctx, permission)
-		}
-		if err != nil {
-			code := "client.lounge.directUnavailable"
-			if errors.Is(err, errAwaitingReply) {
-				code = awaitingReply
-			}
-			if errors.Is(err, errDirectReset) {
-				code = errDirectReset.Error()
-				h.sendDirectPermissions(sender.user.ID, []string{target.ID})
-			}
-			h.reject(sender, input.ID, code)
-			return
-		}
+	mutual, err := h.admitDirect(ctx, sender.user.ID, input)
+	if err != nil {
+		h.rejectDirect(sender, input, err)
+		return
 	}
-	h.relayDirect(sender, input, target)
+	if h.relayDirect(sender, input, target) && mutual {
+		h.savedContactsChanged(sender.user.ID, target.ID)
+	}
 	h.sendDirectPermissions(sender.user.ID, []string{target.ID})
 	h.sendDirectPermissions(target.ID, []string{sender.user.ID})
+}
+
+func (h *hub) admitDirect(ctx context.Context, sender string, input incoming) (bool, error) {
+	if h.directPolicy == nil {
+		return false, nil
+	}
+	permission, err := h.directPermission(sender, input)
+	if err != nil {
+		return false, err
+	}
+	if store, ok := h.directPolicy.(interface {
+		AdmitWithContact(context.Context, directPermission) (bool, error)
+	}); ok {
+		return store.AdmitWithContact(ctx, permission)
+	}
+	return false, h.directPolicy.Admit(ctx, permission)
+}
+
+func (h *hub) rejectDirect(sender *peer, input incoming, err error) {
+	code := "client.lounge.directUnavailable"
+	if errors.Is(err, errAwaitingReply) {
+		code = awaitingReply
+	}
+	if errors.Is(err, errDirectReset) {
+		code = errDirectReset.Error()
+		h.sendDirectPermissions(sender.user.ID, []string{input.To})
+	}
+	h.reject(sender, input.ID, code)
 }
 
 func (h *hub) directAvailableLocked(sender *peer, input incoming) bool {
@@ -66,19 +83,19 @@ func (h *hub) directAvailableLocked(sender *peer, input incoming) bool {
 	return false
 }
 
-func (h *hub) relayDirect(sender *peer, input incoming, target account) {
+func (h *hub) relayDirect(sender *peer, input incoming, target account) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if !h.directAvailableLocked(sender, input) {
 		h.reject(sender, input.ID, "client.lounge.directUnavailable")
-		return
+		return false
 	}
 	profile := sender.user
 	data, err := json.Marshal(message{Type: "message", ID: input.ID, Sender: profile, Text: input.Text,
 		Images: input.Images, Reply: input.Reply, Recipient: &target, Receipts: input.Receipts, Generation: input.Generation,
 		SentAt: time.Now().UTC().Format(time.RFC3339Nano)})
 	if err != nil {
-		return
+		return false
 	}
 	delivered := false
 	for client := range h.clients {
@@ -89,13 +106,14 @@ func (h *hub) relayDirect(sender *peer, input incoming, target account) {
 	}
 	if !delivered {
 		h.reject(sender, input.ID, "client.lounge.directUnavailable")
-		return
+		return false
 	}
 	for client := range h.clients {
 		if h.activeLocked(client) && client.direct && (!input.Receipts || client.receipts) && client.user.ID == sender.user.ID {
 			client.enqueue(data)
 		}
 	}
+	return true
 }
 
 func (h *hub) activeLocked(client *peer) bool {

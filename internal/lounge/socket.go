@@ -89,6 +89,8 @@ func (h *hub) receive(client *peer, input incoming) bool {
 		return h.watchProfiles(client, input.Watch)
 	case "watch":
 		return h.watch(client, input.Watch)
+	case "sync-contacts":
+		return h.syncSavedContacts(client, input)
 	case "receipt", "receipt-confirm":
 		return h.forwardReceipt(client, input)
 	case "message":
@@ -193,8 +195,9 @@ func (h *hub) sendReadyLocked(client *peer, value policy, privacy relationships)
 		DirectReset   bool      `json:"directReset"`
 		AccountLookup bool      `json:"accountLookup"`
 		Names         bool      `json:"names"`
+		SavedContacts bool      `json:"savedContacts"`
 	}{"ready", client.user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true,
-		h.profiles != nil, h.directPolicy != nil, h.accountLookup != nil, h.names != nil})
+		h.profiles != nil, h.directPolicy != nil, h.accountLookup != nil, h.names != nil, h.savedContacts != nil})
 	if err != nil {
 		return false
 	}

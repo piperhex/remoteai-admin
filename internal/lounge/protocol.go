@@ -28,6 +28,7 @@ type incoming struct {
 	ID         string      `json:"id"`
 	Text       string      `json:"text"`
 	Query      string      `json:"query"`
+	Cursor     string      `json:"cursor"`
 	Images     []string    `json:"images"`
 	Avatar     string      `json:"avatar"`
 	Nickname   string      `json:"nickname"`

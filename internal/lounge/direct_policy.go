@@ -69,8 +69,15 @@ func (p postgresDirectPolicy) States(ctx context.Context, user string, peers []s
 // One current permission per pair, never a message, receipt, timestamp or event history.
 // The keyed fingerprint only permits identical retries until the first reply, then is erased.
 func (p postgresDirectPolicy) Admit(ctx context.Context, request directPermission) error {
+	_, err := p.AdmitWithContact(ctx, request)
+	return err
+}
+
+// AdmitWithContact reports only the first reply, so other devices refresh once per newly mutual conversation.
+func (p postgresDirectPolicy) AdmitWithContact(ctx context.Context, request directPermission) (bool, error) {
 	db := p.db.Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).WithContext(ctx)
-	return db.Transaction(func(tx *gorm.DB) error {
+	mutual := false
+	err := db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec(`INSERT INTO lounge_direct_permissions
 			(first_user, second_user, initiator, fingerprint) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING`,
 			request.FirstUser, request.SecondUser, request.Initiator, request.Fingerprint).Error; err != nil {
@@ -99,9 +106,11 @@ func (p postgresDirectPolicy) Admit(ctx context.Context, request directPermissio
 			}
 			return nil
 		}
+		mutual = true
 		return tx.Exec(`UPDATE lounge_direct_permissions SET initiator = NULL, fingerprint = NULL
 			WHERE first_user = ? AND second_user = ?`, request.FirstUser, request.SecondUser).Error
 	})
+	return mutual && err == nil, err
 }
 
 func (h *hub) directPermission(sender string, input incoming) (directPermission, error) {
