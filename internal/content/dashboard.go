@@ -1,10 +1,11 @@
 package content
 
 import (
+	"time"
+
 	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"time"
 )
 
 type datedCount struct {
@@ -85,16 +86,19 @@ func buildDashboardTrend(data dashboardData, start time.Time, days int) ([]gin.H
 }
 func readDashboard(db *gorm.DB, start, until time.Time) (dashboardData, error) {
 	var data dashboardData
+	// All cards and trends share one captured day boundary, even when queries cross midnight.
+	today := until.AddDate(0, 0, -1)
 	queries := []struct {
 		SQL    string
 		Args   []interface{}
 		Target interface{}
 	}{
-		{dashboardSUMMARY, []interface{}{start, start}, &data.Summary},
-		{dashboardUSERS, []interface{}{start}, &data.Users},
-		{dashboardINSTALLATIONS, []interface{}{start}, &data.Installations},
+		{dashboardSUMMARY, []interface{}{today, until, start, until, start, until}, &data.Summary},
+		{dashboardUSERS, []interface{}{start, until}, &data.Users},
+		{dashboardINSTALLATIONS, []interface{}{start, until}, &data.Installations},
 		{dashboardPLATFORMS, nil, &data.Platforms},
-		{dashboardPLANS, nil, &data.Plans}, {dashboardDAILY_ACTIVE, nil, &data.DailyActive},
+		{dashboardPLANS, nil, &data.Plans},
+		{dashboardDAILY_ACTIVE, []interface{}{today, until}, &data.DailyActive},
 		{dashboardDAILY_ACTIVE_TREND, []interface{}{start, until}, &data.Activity},
 	}
 	for _, query := range queries {
@@ -115,8 +119,8 @@ func (s *service) dashboard(c *gin.Context) {
 	if days != 7 && days != 30 && days != 90 {
 		days = 30
 	}
-	now := time.Now().UTC()
-	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, 1-days)
+	now := time.Now().In(statisticsLocation)
+	start := statisticsDayStart(now).AddDate(0, 0, 1-days)
 	data, err := readDashboard(s.deps.DB, start, start.AddDate(0, 0, days))
 	if err != nil {
 		platform.Respond(c, nil, err)
@@ -143,9 +147,7 @@ func (s *service) dashboard(c *gin.Context) {
 
 // ReadTrafficOverview returns complete Beijing days and the lifetime relay byte count.
 func ReadTrafficOverview(db *gorm.DB, days int, now time.Time) (gin.H, error) {
-	beijing := time.FixedZone("Asia/Shanghai", 8*60*60)
-	local := now.In(beijing)
-	start := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, beijing).AddDate(0, 0, 1-days)
+	start := statisticsDayStart(now).AddDate(0, 0, 1-days)
 	var total int64
 	if err := db.Raw("SELECT COALESCE(SUM(bytes),0) FROM chat_relay_traffic").Scan(&total).Error; err != nil {
 		return nil, err

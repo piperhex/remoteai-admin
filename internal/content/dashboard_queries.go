@@ -7,11 +7,12 @@ const (
       (SELECT COUNT(*) FROM users WHERE disabled = false)::text AS "activeUsers",
       (SELECT COUNT(DISTINCT "deviceId") FROM device_telemetry_events
         WHERE "eventType" = 'activity'
-          AND "createdAt" >= (date_trunc('day', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')
+          AND "createdAt" >= ? AND "createdAt" < ?
       )::text AS "dailyActiveUsers",
-      (SELECT COUNT(*) FROM users WHERE "createdAt" >= ?)::text AS "newUsers",
+      (SELECT COUNT(*) FROM users WHERE "createdAt" >= ? AND "createdAt" < ?)::text AS "newUsers",
       (SELECT COUNT(*) FROM device_installations)::text AS "totalInstallations",
-      (SELECT COUNT(*) FROM device_installations WHERE "firstSeenAt" >= ?)::text AS "newInstallations",
+      (SELECT COUNT(*) FROM device_installations
+        WHERE "firstSeenAt" >= ? AND "firstSeenAt" < ?)::text AS "newInstallations",
       (SELECT COUNT(*) FROM system_accounts)::text AS "officialAccounts",
       (SELECT COUNT(DISTINCT "systemAccountId") FROM system_account_bindings)::text AS "boundOfficialAccounts",
       (SELECT COUNT(*) FROM system_account_bindings)::text AS "totalBindings",
@@ -20,18 +21,18 @@ const (
       (SELECT COUNT(*) FROM admin_approval_requests WHERE status = 'pending')::text AS "pendingApprovals"
   `
 	dashboardUSERS = `
-    SELECT TO_CHAR(("createdAt" AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS date,
+    SELECT TO_CHAR(("createdAt" AT TIME ZONE '` + statisticsTimeZone + `')::date, 'YYYY-MM-DD') AS date,
            COUNT(*)::text AS count
     FROM users
-    WHERE "createdAt" >= ?
+    WHERE "createdAt" >= ? AND "createdAt" < ?
     GROUP BY 1
     ORDER BY 1
   `
 	dashboardINSTALLATIONS = `
-    SELECT TO_CHAR(("firstSeenAt" AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS date,
+    SELECT TO_CHAR(("firstSeenAt" AT TIME ZONE '` + statisticsTimeZone + `')::date, 'YYYY-MM-DD') AS date,
            platform, COUNT(*)::text AS count
     FROM device_installations
-    WHERE "firstSeenAt" >= ?
+    WHERE "firstSeenAt" >= ? AND "firstSeenAt" < ?
     GROUP BY 1, platform
     ORDER BY 1, platform
   `
@@ -53,11 +54,11 @@ const (
     SELECT platform AS name, COUNT(DISTINCT "deviceId")::text AS count
     FROM device_telemetry_events
     WHERE "eventType" = 'activity'
-      AND "createdAt" >= (date_trunc('day', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')
+      AND "createdAt" >= ? AND "createdAt" < ?
     GROUP BY platform
   `
 	dashboardDAILY_ACTIVE_TREND = `
-    SELECT TO_CHAR(("createdAt" AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS date,
+    SELECT TO_CHAR(("createdAt" AT TIME ZONE '` + statisticsTimeZone + `')::date, 'YYYY-MM-DD') AS date,
            platform, COUNT(DISTINCT "deviceId")::text AS count
     FROM device_telemetry_events
     WHERE "eventType" = 'activity' AND "createdAt" >= ? AND "createdAt" < ?

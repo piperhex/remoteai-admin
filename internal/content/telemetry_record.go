@@ -72,7 +72,7 @@ func (s *service) recordTelemetry(tx *gorm.DB, source string, input installation
 		// Activity metadata must not rewrite the platform or version of an installation.
 		input.Platform = item.Platform
 	}
-	return recordTelemetryEvent(tx, input)
+	return recordTelemetryEvent(tx, input, time.Now())
 }
 
 func saveInstallation(tx *gorm.DB, input installationInput) error {
@@ -87,11 +87,10 @@ func saveInstallation(tx *gorm.DB, input installationInput) error {
 	}).Create(&item).Error
 }
 
-func recordTelemetryEvent(tx *gorm.DB, input installationInput) error {
-	now := time.Now().UTC()
+func recordTelemetryEvent(tx *gorm.DB, input installationInput, now time.Time) error {
 	if input.EventType == "activity" {
 		var count int64
-		start := now.Truncate(24 * time.Hour)
+		start := statisticsDayStart(now)
 		err := tx.Model(&DeviceTelemetryEvent{}).
 			Where(`"deviceId" = ? AND "eventType" = ? AND "createdAt" >= ? AND "createdAt" < ?`,
 				input.DeviceId, input.EventType, start, start.AddDate(0, 0, 1)).Count(&count).Error
@@ -101,6 +100,6 @@ func recordTelemetryEvent(tx *gorm.DB, input installationInput) error {
 	}
 	return tx.Create(&DeviceTelemetryEvent{
 		Id: newID(), DeviceId: input.DeviceId, Platform: input.Platform,
-		EventType: input.EventType, CreatedAt: now,
+		EventType: input.EventType, CreatedAt: now.UTC(),
 	}).Error
 }
