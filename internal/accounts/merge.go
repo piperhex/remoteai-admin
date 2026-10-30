@@ -20,7 +20,7 @@ var accountFields = []string{
 var providerFields = []string{"kind", "name", "group", "baseUrl", "apiKey", "model", "models", "modelReasoningEfforts",
 	"modelContextWindows", "modelApiFormats", "imageInputModels", "contextWindow", "modelSelectionControlledByCodex",
 	"fastModeEnabled", "apiFormat", "balancePlatform", "balanceQueryUrl", "balanceQueryToken", "walletQueryUrl",
-	"walletQueryToken", "walletUsername", "walletPassword", "requestOptions", "balanceScript"}
+	"walletQueryToken", "walletUsername", "walletPassword", "requestOptions", "balanceScript", "marketSource"}
 
 func accountDTO(row account) object {
 	result := object{
@@ -229,7 +229,7 @@ func mergeProvider(existing *provider, owner string, incoming object) (*provider
 		oldVersions := versions(existing.FieldModifiedAt, iso(existing.LastModifiedAt), providerFields)
 		changed := false
 		for _, key := range providerFields {
-			if key == "balanceScript" && !has(incoming, key) {
+			if (key == "balanceScript" || key == "marketSource") && !has(incoming, key) {
 				continue
 			}
 			if key == "requestOptions" && incoming[key] == nil {
@@ -252,6 +252,9 @@ func mergeProvider(existing *provider, owner string, incoming object) (*provider
 	err := decodeMap(values, row)
 	if err == nil {
 		err = validateBalanceScript(row.BalanceScript, row.BaseURL)
+	}
+	if err == nil {
+		err = validateMarketSource(row.MarketSource)
 	}
 	return row, err
 }

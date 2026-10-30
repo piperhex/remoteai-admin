@@ -79,6 +79,7 @@ func (s service) save(official bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var body saveInput
 		if decode(c, &body) != nil || body.Published == nil || validate(body.Draft) != nil ||
+			(*body.Published && body.Draft.PageLink == nil) ||
 			(c.Param("id") != "" && (!validItemID(c.Param("id")) || body.Revision < 1)) ||
 			(c.Param("id") == "" && body.Revision != 0) {
 			platform.Respond(c, nil, invalid())

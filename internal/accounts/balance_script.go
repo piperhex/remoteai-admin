@@ -8,3 +8,7 @@ func validateBalanceScript(value object, baseURL string) error {
 	}
 	return providermarket.ValidateBalanceScript(value, baseURL)
 }
+
+func validateMarketSource(value object) error {
+	return providermarket.ValidateMarketSource(value)
+}

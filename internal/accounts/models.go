@@ -52,6 +52,7 @@ type provider struct {
 	APIFormat         string     `gorm:"column:apiFormat"                       json:"apiFormat"`
 	RequestOptions    object     `gorm:"column:requestOptions;serializer:json"  json:"requestOptions"`
 	BalanceScript     object     `gorm:"column:balanceScript;serializer:json" json:"balanceScript"`
+	MarketSource      object     `gorm:"column:marketSource;serializer:json" json:"marketSource"`
 	BalancePlatform   *string    `gorm:"column:balancePlatform"                 json:"balancePlatform"`
 	BalanceQueryURL   *string    `gorm:"column:balanceQueryUrl"                 json:"balanceQueryUrl"`
 	BalanceQueryToken *string    `gorm:"column:balanceQueryToken"               json:"balanceQueryToken"`

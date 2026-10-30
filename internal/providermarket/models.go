@@ -29,6 +29,7 @@ type draft struct {
 	Unit         string        `json:"unit"`
 	Models       []model       `json:"models"`
 	BalanceQuery *balanceQuery `json:"balanceQuery"`
+	PageLink     *PageLink     `json:"pageLink"`
 }
 type balanceQuery struct {
 	URL    string `json:"url"`

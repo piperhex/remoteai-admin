@@ -9,6 +9,7 @@ import (
 func pointer[T any](value T) *T { return &value }
 func fixture() draft {
 	return draft{Name: "Example", Description: "Public connection", BaseURL: "https://api.example.test/v1",
+		PageLink: &PageLink{URL: "https://example.test/dashboard", Query: "source=remoteai", Headers: map[string]string{}},
 		Currency: "USD", Unit: "millionTokens", Models: []model{
 			{ID: "model-b", Protocol: "openaiResponses", Tiers: []tier{
 				{Multiplier: 5, price: price{Input: pointer(0.0)}},

@@ -89,7 +89,7 @@ func validModel(m model) bool {
 	return true
 }
 func validate(d draft) error {
-	if !validBalanceQuery(d.BalanceQuery, d.BaseURL) {
+	if !validBalanceQuery(d.BalanceQuery, d.BaseURL) || !validPageLink(d.PageLink) {
 		return invalid()
 	}
 	if strings.TrimSpace(d.Name) == "" || !validText(d.Name, 80) || !validText(d.Description, 4000) ||
