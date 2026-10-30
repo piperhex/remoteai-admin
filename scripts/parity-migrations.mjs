@@ -23,7 +23,7 @@ const goOnlyTables = ['token_cost_preset_settings', 'user_login_locks', 'chat_re
   'synced_aggregates', 'update_sharing_settings', 'device_port_mappings', 'update_download_reports',
   'synced_ssh_profiles', 'lounge_user_policies', 'lounge_user_blocks',
   'lounge_direct_permissions', 'lounge_profiles', 'lounge_nicknames',
-  'lounge_contact_remarks', 'lounge_notification_settings'];
+  'lounge_contact_remarks', 'lounge_notification_settings', 'provider_market_items', 'provider_market_usage'];
 
 function docker(...args) {
   return execFileSync('docker', args, { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim();
@@ -45,7 +45,7 @@ function schema(postgres, database, legacyOnly = false, excludedTables = []) {
     .join('\n');
   // Additive columns are asserted separately; the frozen Nest schema cannot contain them.
   return legacyOnly ? dump.replace(/^    "gui(?:Account|Provider)Id" character varying\(120\),?\n/gm, '')
-    .replace(/^    "requestOptions" jsonb,?\n/gm, '')
+    .replace(/^    "(?:requestOptions|balanceScript)" jsonb,?\n/gm, '')
     .replace(/,\n\);/g, '\n);') : dump;
 }
 
@@ -66,8 +66,10 @@ async function checkProviderOptionsColumn(name) {
   try {
     const columns = await client.query(`SELECT column_name, data_type, is_nullable
       FROM information_schema.columns WHERE table_schema='public' AND table_name='synced_providers'
-      AND column_name='requestOptions'`);
-    assert.deepEqual(columns.rows, [{ column_name: 'requestOptions', data_type: 'jsonb', is_nullable: 'YES' }]);
+      AND column_name IN ('requestOptions', 'balanceScript') ORDER BY column_name`);
+    assert.deepEqual(columns.rows, ['balanceScript', 'requestOptions'].map((column_name) => ({
+      column_name, data_type: 'jsonb', is_nullable: 'YES',
+    })));
   } finally { await client.end(); }
 }
 

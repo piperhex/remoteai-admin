@@ -17,6 +17,7 @@ const goOnlyPermissions = new Set([
   'admin.token-pricing.read', 'admin.token-pricing.manage',
   'admin.chat-traffic.read', 'admin.chat-traffic.manage',
   'admin.update-sharing.read', 'admin.update-sharing.manage',
+  'admin.provider-market.read', 'admin.provider-market.manage', 'admin.provider-market.order',
 ]);
 // The chat policy/limit smoke tests cover these additions; compare only the frozen Nest contract here.
 const goOnlyChatFields = new Set([
@@ -25,6 +26,16 @@ const goOnlyChatFields = new Set([
   'relayHeartbeatTimeoutSeconds', 'fileDownloadWindowSize', 'fileBulkEnabled',
 ]);
 const goOnlyDeviceFields = new Set(['guiAccountId', 'guiProviderId']);
+const loungeDefaults = { loungeFileMaxMb: 300, loungeGroupImageMaxMb: 1, loungeDirectImageMaxMb: 1 };
+
+function legacyChatField(value, field) {
+  if (!('threadPageSize' in value)) return true;
+  if (Object.hasOwn(loungeDefaults, field)) {
+    assert.equal(value[field], loungeDefaults[field], `legacy settings must preserve ${field}`);
+    return false;
+  }
+  return !goOnlyChatFields.has(field);
+}
 
 function legacyDeviceField(value, field) {
   if (!('deviceId' in value) || !goOnlyDeviceFields.has(field)) return true;
@@ -34,12 +45,16 @@ function legacyDeviceField(value, field) {
 }
 
 function legacyProviderField(value, field, parent) {
-  if (field !== 'requestOptions') return true;
+  if (!['requestOptions', 'balanceScript'].includes(field)) return true;
   if (parent === 'fieldModifiedAt') {
     assert.match(value[field], isoPattern, 'provider options version must be an ISO timestamp');
     return false;
   }
   if (!('modelApiFormats' in value)) return true;
+  if (field === 'balanceScript') {
+    assert.equal(value[field], null, 'legacy provider must not acquire a balance parser');
+    return false;
+  }
   // Old clients never send advanced options; dedicated Go tests cover their persisted values.
   assert.ok(value[field] === null || Object.keys(value[field]).length === 0,
     'legacy provider must not acquire request options');
@@ -64,7 +79,7 @@ export async function request(base, method, path, options = {}) {
   return { status: response.status, body: value, headers: Object.fromEntries(response.headers) };
 }
 
-function normalized(value, context, key = '') {
+export function normalizeLegacyResponse(value, context, key = '') {
   if (Buffer.isBuffer(value)) return value;
   if (typeof value === 'string') {
     if (context.aliases.has(value)) return context.aliases.get(value);
@@ -73,7 +88,7 @@ function normalized(value, context, key = '') {
       return `<${key}>`;
     }
     if (key === 'token' && /^[0-9a-f-]{36}\.[A-Za-z0-9_-]{43}$/.test(value)) {
-      return `${normalized(value.slice(0, 36), context)}.<invitation HMAC>`;
+      return `${normalizeLegacyResponse(value.slice(0, 36), context)}.<invitation HMAC>`;
     }
     if (isoPattern.test(value)) return '<ISO timestamp>';
     if (uuidPattern.test(value)) {
@@ -87,7 +102,7 @@ function normalized(value, context, key = '') {
       if (key === 'permissions' && typeof item === 'string') return !goOnlyPermissions.has(item);
       return !(item && typeof item === 'object' && goOnlyPermissions.has(item.code));
     });
-    const result = legacyValues.map((item) => normalized(item, context));
+    const result = legacyValues.map((item) => normalizeLegacyResponse(item, context));
     // Permissions are a set; TypeORM and GORM do not promise join-row ordering.
     return key === 'permissions' ? result.sort() : result;
   }
@@ -101,10 +116,10 @@ function normalized(value, context, key = '') {
     if ('threadPageSize' in value && 'fileBulkEnabled' in value) {
       assert.equal(value.fileBulkEnabled, 0, 'legacy settings must keep bulk downloads disabled');
     }
-    const fields = Object.keys(value).filter((field) => !(goOnlyChatFields.has(field) && 'threadPageSize' in value)
+    const fields = Object.keys(value).filter((field) => legacyChatField(value, field)
       && !(legacyPolicy && ['binaryRelay', 'fileBulkV1'].includes(field)) && legacyDeviceField(value, field)
       && legacyProviderField(value, field, key));
-    return Object.fromEntries(fields.sort().map((field) => [field, normalized(value[field], context, field)]));
+    return Object.fromEntries(fields.sort().map((field) => [field, normalizeLegacyResponse(value[field], context, field)]));
   }
   return value;
 }
@@ -135,8 +150,8 @@ export async function createPair(options = {}) {
     check(label, responses, transform = (value) => value) {
       try {
         assert.equal(responses.modern.status, responses.legacy.status, `${label}: status differs`);
-        const left = normalized(transform(responses.legacy.body, 'legacy'), contexts.legacy);
-        const right = normalized(transform(responses.modern.body, 'modern'), contexts.modern);
+        const left = normalizeLegacyResponse(transform(responses.legacy.body, 'legacy'), contexts.legacy);
+        const right = normalizeLegacyResponse(transform(responses.modern.body, 'modern'), contexts.modern);
         assert.deepEqual(right, left, `${label}: response differs`);
       } catch (error) {
         if (process.env.PARITY_COLLECT !== '1') throw error;

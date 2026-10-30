@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { checkDashboard } from './parity-dashboard.mjs';
 
 const missingID = '10000000-0000-4000-8000-000000000099';
 const png = Buffer.from(
@@ -272,7 +273,7 @@ async function analytics(pair) {
   await expected(pair, 'installations search', 'GET', `/admin/api/telemetry/installations?search=${deviceId}&platform=windows`);
   await expected(pair, 'events search', 'GET', `/admin/api/telemetry/events?search=${deviceId}&eventType=activity`);
   await expected(pair, 'invalid telemetry', 'POST', '/telemetry/installations', { auth: false, body: { ...event, eventType: 'invalid' } }, 400);
-  for (const days of [7, 30, 90]) await expected(pair, `dashboard ${days} days`, 'GET', `/admin/api/dashboard/overview?days=${days}`);
+  for (const days of [7, 30, 90]) await checkDashboard(pair, days);
   await expected(pair, 'invalid dashboard range', 'GET', '/admin/api/dashboard/overview?days=8', {}, 400);
 }
 
