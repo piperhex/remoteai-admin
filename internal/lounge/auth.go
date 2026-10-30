@@ -53,7 +53,7 @@ func (h *hub) ticket(c *gin.Context) {
 	user := platform.User(c)
 	expires := time.Now().Add(ticketLifetime)
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims{
-		Account: user.Email,
+		Account: accountPrefix(user.Email),
 		RegisteredClaims: jwt.RegisteredClaims{Subject: user.ID, Audience: []string{"lounge"},
 			ExpiresAt: jwt.NewNumericDate(expires)},
 	}).SignedString(h.key)
@@ -75,5 +75,5 @@ func (h *hub) authenticate(ticket string) (account, time.Time, error) {
 	if err != nil || value.Subject == "" || value.Account == "" {
 		return account{}, time.Time{}, errInvalid
 	}
-	return account{ID: value.Subject, Account: value.Account}, value.ExpiresAt.Time, nil
+	return account{ID: value.Subject, Account: accountPrefix(value.Account)}, value.ExpiresAt.Time, nil
 }

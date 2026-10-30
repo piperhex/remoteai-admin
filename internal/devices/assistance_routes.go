@@ -6,6 +6,7 @@ import (
 
 	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func (g *ChatGateway) registerAssistance(router *gin.Engine) {
@@ -27,15 +28,15 @@ func (g *ChatGateway) assistanceList(c *gin.Context) {
 func (g *ChatGateway) assistanceCreate(c *gin.Context) {
 	var input struct {
 		DeviceID string `json:"deviceId" binding:"required,max=160"`
-		Email    string `json:"email" binding:"required,max=254"`
+		Email    string `json:"email" binding:"max=254"`
+		UserID   string `json:"userId" binding:"omitempty,uuid"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		platform.Fail(c, 400, "请输入有效的邮箱地址。")
 		return
 	}
 	email := strings.ToLower(strings.TrimSpace(input.Email))
-	parsed, err := mail.ParseAddress(email)
-	if err != nil || parsed.Address != email {
+	if !validAssistanceRecipient(email, input.UserID) {
 		platform.Fail(c, 400, "请输入有效的邮箱地址。")
 		return
 	}
@@ -45,7 +46,7 @@ func (g *ChatGateway) assistanceCreate(c *gin.Context) {
 		platform.Respond(c, nil, err)
 		return
 	}
-	helper, err := g.assistanceRecipient(email)
+	helper, label, err := g.assistanceRecipient(email, input.UserID)
 	if err != nil {
 		platform.Respond(c, nil, err)
 		return
@@ -53,20 +54,41 @@ func (g *ChatGateway) assistanceCreate(c *gin.Context) {
 	if helper == user.ID {
 		helper = ""
 	}
+	hostLabel := user.Email
+	if input.UserID != "" {
+		// Chat invitations resolve by stable ID, never by a potentially shared prefix.
+		hostLabel, _, _ = strings.Cut(hostLabel, "@")
+		email = label
+	}
 	request, err := g.sessions.createAssistance(assistanceRequest{
-		HostOwner: user.ID, HostDeviceID: device.DeviceID, HostName: device.Name, HostEmail: user.Email,
+		HostOwner: user.ID, HostDeviceID: device.DeviceID, HostName: device.Name, HostEmail: hostLabel,
 		HelperOwner: helper, HelperEmail: email,
 	})
 	platform.Respond(c, request, err)
 }
 
-func (g *ChatGateway) assistanceRecipient(email string) (string, error) {
-	var user struct{ ID string }
-	result := g.service.deps.DB.Table("users").Select("id").Where("email = ? AND disabled = ?", email, false).Scan(&user)
-	if result.Error != nil {
-		return "", result.Error
+func validAssistanceRecipient(email, userID string) bool {
+	if userID != "" {
+		_, err := uuid.Parse(userID)
+		return email == "" && err == nil
 	}
-	return user.ID, nil
+	parsed, err := mail.ParseAddress(email)
+	return err == nil && parsed.Address == email
+}
+
+func (g *ChatGateway) assistanceRecipient(email, userID string) (string, string, error) {
+	var user struct{ ID, Label string }
+	query := g.service.deps.DB.Table("users").Select("id, split_part(email, '@', 1) AS label").Where("disabled = ?", false)
+	if userID != "" {
+		query = query.Where("id = ?", userID)
+	} else {
+		query = query.Where("email = ?", email)
+	}
+	result := query.Scan(&user)
+	if result.Error != nil {
+		return "", "", result.Error
+	}
+	return user.ID, user.Label, nil
 }
 
 func (g *ChatGateway) assistanceUpdate(c *gin.Context) {

@@ -35,7 +35,7 @@ func TestAccountLookupRepliesOnlyToAuthenticatedRequester(t *testing.T) {
 		write(t, alice, incoming{Type: "lookup-account", ID: "lookup", Query: query})
 		frame := read(t, alice)
 		if frame["type"] != "account-found" || frame["id"] != "lookup" ||
-			frame["user"].(map[string]interface{})["account"] != "bob@example.test" {
+			frame["user"].(map[string]interface{})["account"] != "bob" {
 			t.Fatal(frame)
 		}
 	}
