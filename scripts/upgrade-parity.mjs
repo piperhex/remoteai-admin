@@ -27,6 +27,7 @@ const migrations = [
   '20261029-lounge-names.sql',
   '20261029-lounge-notifications.sql',
   '20261029_provider_market.sql',
+  '20261030_provider_market_page.sql',
 ];
 
 // The frozen Nest schema lacks Go additions; upgrade only the fixed localhost fixture database.

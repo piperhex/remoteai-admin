@@ -27,3 +27,12 @@ test('additive lounge settings must keep defaults for frozen clients', () => {
   }
   assert.deepEqual(normalize({ loungeFileMaxMb: 9 }), { loungeFileMaxMb: 9 });
 });
+
+test('old Providers cannot acquire market page access', () => {
+  const provider = { modelApiFormats: {}, marketSource: null,
+    fieldModifiedAt: { marketSource: '2026-10-30T00:00:00.000Z' } };
+  assert.deepEqual(normalize(provider), { fieldModifiedAt: {}, modelApiFormats: {} });
+  assert.throws(() => normalize({ ...provider, marketSource: {} }), /must not acquire market page access/);
+  assert.throws(() => normalize({ ...provider, fieldModifiedAt: { marketSource: 'invalid' } }), /ISO timestamp/);
+  assert.deepEqual(normalize({ marketSource: 'unrelated' }), { marketSource: 'unrelated' });
+});

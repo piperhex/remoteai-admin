@@ -45,7 +45,7 @@ function schema(postgres, database, legacyOnly = false, excludedTables = []) {
     .join('\n');
   // Additive columns are asserted separately; the frozen Nest schema cannot contain them.
   return legacyOnly ? dump.replace(/^    "gui(?:Account|Provider)Id" character varying\(120\),?\n/gm, '')
-    .replace(/^    "(?:requestOptions|balanceScript)" jsonb,?\n/gm, '')
+    .replace(/^    "(?:requestOptions|balanceScript|marketSource)" jsonb,?\n/gm, '')
     .replace(/,\n\);/g, '\n);') : dump;
 }
 
@@ -66,8 +66,8 @@ async function checkProviderOptionsColumn(name) {
   try {
     const columns = await client.query(`SELECT column_name, data_type, is_nullable
       FROM information_schema.columns WHERE table_schema='public' AND table_name='synced_providers'
-      AND column_name IN ('requestOptions', 'balanceScript') ORDER BY column_name`);
-    assert.deepEqual(columns.rows, ['balanceScript', 'requestOptions'].map((column_name) => ({
+      AND column_name IN ('requestOptions', 'balanceScript', 'marketSource') ORDER BY column_name`);
+    assert.deepEqual(columns.rows, ['balanceScript', 'marketSource', 'requestOptions'].map((column_name) => ({
       column_name, data_type: 'jsonb', is_nullable: 'YES',
     })));
   } finally { await client.end(); }
@@ -184,6 +184,30 @@ async function checkDownloadReportMigration(postgres) {
   console.log('PASS download report upgrade matches bootstrap and preserves reports on rerun');
 }
 
+async function checkMarketSourceMigration(postgres) {
+  const client = await database('admin_go');
+  const baseline = schema(postgres, 'admin_go');
+  const migration = readFileSync(new URL('../sql/20261030_provider_market_page.sql', import.meta.url), 'utf8');
+  const source = { id: '11111111-1111-4111-8111-111111111111', page: { url: 'https://example.test/dashboard' } };
+  const id = 'cc22cc22-0000-4000-8000-000000000003';
+  try {
+    const owner = (await client.query('SELECT id FROM users ORDER BY id LIMIT 1')).rows[0].id;
+    await client.query(`INSERT INTO synced_providers
+      (id,"ownerId","providerId",name,"baseUrl","apiKey",model,"apiFormat","marketSource")
+      VALUES($1,$2,'market-migration-sentinel','Keep provider','https://example.test/v1','fixture','test','responses',$3)`,
+    [id, owner, source]);
+    await client.query(migration);
+    await client.query(migration);
+    const saved = await client.query('SELECT name,"marketSource" FROM synced_providers WHERE id=$1', [id]);
+    assert.deepEqual(saved.rows, [{ name: 'Keep provider', marketSource: source }]);
+    assert.equal(schema(postgres, 'admin_go'), baseline, 'market page migration reruns must preserve schema');
+  } finally {
+    await client.query('DELETE FROM synced_providers WHERE id=$1', [id]);
+    await client.end();
+  }
+  console.log('PASS market page upgrade preserves provider data and page access on rerun');
+}
+
 export async function runMigrations() {
   const postgres = serviceContainer('postgres');
   const config = JSON.parse(docker('inspect', serviceContainer('admin-go')))[0];
@@ -195,6 +219,7 @@ export async function runMigrations() {
   await checkUsageMigration(postgres);
   await checkPortMappingMigration(postgres);
   await checkDownloadReportMigration(postgres);
+  await checkMarketSourceMigration(postgres);
   const migrationDatabase = await database('admin_go');
   try {
     await checkSshProfilesMigration(migrationDatabase);
@@ -250,6 +275,7 @@ export async function runMigrations() {
     { label: 'usage v2 upgrade retains legacy data without importing it' },
     { label: 'port mapping upgrade preserves saved mappings on rerun' },
     { label: 'download report upgrade preserves saved reports on rerun' },
+    { label: 'market page upgrade preserves providers and page access on rerun' },
     { label: 'SSH profile upgrade preserves saved profiles and deletion markers on rerun' },
     { label: 'lounge upgrade preserves moderation policies and deletes them with their user' },
     { label: 'idempotent initialization and data preservation' }];

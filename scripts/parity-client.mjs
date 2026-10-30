@@ -45,12 +45,16 @@ function legacyDeviceField(value, field) {
 }
 
 function legacyProviderField(value, field, parent) {
-  if (!['requestOptions', 'balanceScript'].includes(field)) return true;
+  if (!['requestOptions', 'balanceScript', 'marketSource'].includes(field)) return true;
   if (parent === 'fieldModifiedAt') {
     assert.match(value[field], isoPattern, 'provider options version must be an ISO timestamp');
     return false;
   }
   if (!('modelApiFormats' in value)) return true;
+  if (field === 'marketSource') {
+    assert.equal(value[field], null, 'legacy provider must not acquire market page access');
+    return false;
+  }
   if (field === 'balanceScript') {
     assert.equal(value[field], null, 'legacy provider must not acquire a balance parser');
     return false;
