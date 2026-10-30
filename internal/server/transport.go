@@ -123,6 +123,7 @@ func transportHeaders() gin.HandlerFunc {
 			headers.Del("Content-Type")
 			headers.Del("Content-Length")
 		}
+		data = compressResponse(c.Request, writer, data)
 		if headers.Get("Content-Length") == "" && writer.Code != 204 && writer.Code != 304 {
 			headers.Set("Content-Length", strconv.Itoa(len(data)))
 		}

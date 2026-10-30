@@ -4,6 +4,14 @@
 `apps/admin` 的 NestJS 源码已冻结，仅用于本地兼容对照测试。
 以下命令从仓库根目录执行，不包含任何具体生产主机或凭据。
 
+## 文本响应压缩
+
+Go 对至少 1 KiB 的完整 GET/HEAD 文本响应协商 gzip，包括社区列表、其他 JSON 接口和管理页面资源。
+保留原有弱 ETag 与条件请求，合并 `Vary: Accept-Encoding`，不压缩范围下载、已编码内容、
+`no-transform` 响应、SSE、图片或 ZIP。Web 容器的 Nginx 同样压缩 HTML、JS、CSS、JSON 和 SVG。
+无需数据库迁移；分别更新 Go 与 Web 镜像。浏览器自动协商，新桌面客户端启用 gzip 自动解码，
+旧客户端继续收到未压缩响应，需升级客户端后才能减少这部分流量。
+
 ## 在线交流（2026-10-28）
 
 先依次执行 `sql/20261028-lounge-moderation.sql`、`sql/20261028-lounge-blocks.sql`、
