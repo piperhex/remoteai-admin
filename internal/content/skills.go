@@ -27,7 +27,8 @@ func presentSkill(item SkillMarketItem, admin bool) gin.H {
 }
 func (s *service) listSkills(c *gin.Context) {
 	items := []SkillMarketItem{}
-	err := s.deps.DB.Omit("ArchiveData", "PreviewData").Order(`"createdAt" DESC`).Limit(200).Find(&items).Error
+	// Clients search this metadata catalog locally and have no pagination contract.
+	err := s.deps.DB.Omit("ArchiveData", "PreviewData").Order(`"createdAt" DESC`).Find(&items).Error
 	result := make([]gin.H, 0, len(items))
 	for _, item := range items {
 		result = append(result, presentSkill(item, false))
