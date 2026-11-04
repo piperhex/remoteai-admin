@@ -115,6 +115,8 @@ func TestKongRouteAuthenticationBoundaries(t *testing.T) {
 	for _, path := range []string{"/lounge/socket", "/auth/login", "/device-chat", "/device-switch", "/desktop-service/revoke",
 		"/help-assistant/settings", "/official-models", "/update-packages", "/update-sharing/settings",
 		"/update-packages/assets/652496018", "/update-packages/v2.0.2/Remote.AI_2.0.2_windows-x64-setup.exe",
+		"/native-update-packages", "/native-update-packages/v2.2.1/RemoteAI-android-v2.2.1.apk",
+		"/native-update-packages/assets/652496019",
 		"/admin-assets/app.js"} {
 		service, route := matchKongRoute(services, path)
 		if service.URL != kongGoUpstream || stripsKongPath(route) || len(route.Plugins) != 0 {

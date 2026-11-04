@@ -16,11 +16,13 @@ import (
 )
 
 const (
-	releaseAPI             = "https://api.github.com/repos/piperhex/remoteai/releases?per_page=100"
-	releasePrefix          = "https://github.com/piperhex/remoteai/releases/download/"
-	retainedVersions       = 3
-	maxAssetBytes    int64 = 512 * 1024 * 1024
-	maxCatalogBytes        = 4 * 1024 * 1024
+	releaseAPI                = "https://api.github.com/repos/piperhex/remoteai/releases?per_page=100"
+	releasePrefix             = "https://github.com/piperhex/remoteai/releases/download/"
+	nativeReleaseAPI          = "https://api.github.com/repos/piperhex/remoteai-native/releases?per_page=100"
+	nativeReleasePrefix       = "https://github.com/piperhex/remoteai-native/releases/download/"
+	retainedVersions          = 3
+	maxAssetBytes       int64 = 512 * 1024 * 1024
+	maxCatalogBytes           = 4 * 1024 * 1024
 )
 
 var versionPattern = regexp.MustCompile(`^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
@@ -66,7 +68,11 @@ func supportedAsset(tag string, value asset) bool {
 		value.Size <= 0 || value.Size > maxAssetBytes {
 		return false
 	}
-	if value.URL != releasePrefix+tag+"/"+url.PathEscape(value.Name) {
+	suffix := tag + "/" + url.PathEscape(value.Name)
+	if value.URL == nativeReleasePrefix+suffix {
+		return strings.HasSuffix(value.Name, ".apk") || strings.HasSuffix(value.Name, "-ios-unsigned.app.zip")
+	}
+	if value.URL != releasePrefix+suffix {
 		return false
 	}
 	for _, extension := range []string{".apk", ".exe", ".msi", ".zip", ".tar.gz", ".AppImage", ".deb", ".dmg"} {

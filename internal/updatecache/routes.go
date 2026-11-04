@@ -26,19 +26,35 @@ func Register(router *gin.Engine, config platform.Config) func() {
 	if proxy, err := url.Parse(config.Get("UPDATE_CACHE_PROXY", "")); err == nil && proxy.Host != "" {
 		transport.Proxy = http.ProxyURL(proxy)
 	}
-	s := &cache{root: config.Get("UPDATE_CACHE_DIR", ""), catalogURL: releaseAPI,
-		client:  &http.Client{Transport: transport, Timeout: 20 * time.Minute},
+	root := config.Get("UPDATE_CACHE_DIR", "")
+	nativeRoot := ""
+	if root != "" {
+		nativeRoot = filepath.Join(root, "native")
+	}
+	client := &http.Client{Transport: transport, Timeout: 20 * time.Minute}
+	desktop := startCache(ctx, root, releaseAPI, client)
+	native := startCache(ctx, nativeRoot, nativeReleaseAPI, client)
+	desktop.registerRoutes(router)
+	native.registerRoutesAt(router, "/native-update-packages")
+	return func() { cancel(); <-desktop.done; <-native.done; transport.CloseIdleConnections() }
+}
+
+func startCache(ctx context.Context, root, catalogURL string, client *http.Client) *cache {
+	s := &cache{root: root, catalogURL: catalogURL, client: client,
 		records: map[string]record{}, done: make(chan struct{})}
-	if s.root != "" {
+	if root != "" {
 		go s.run(ctx)
 	} else {
 		close(s.done)
 	}
-	s.registerRoutes(router)
-	return func() { cancel(); <-s.done; transport.CloseIdleConnections() }
+	return s
 }
 
 func (s *cache) registerRoutes(router *gin.Engine) {
+	s.registerRoutesAt(router, "/update-packages")
+}
+
+func (s *cache) registerRoutesAt(router *gin.Engine, prefix string) {
 	slots := make(chan struct{}, maxConcurrentDownloads)
 	handler := func(c *gin.Context) {
 		defer func() {
@@ -55,9 +71,9 @@ func (s *cache) registerRoutes(router *gin.Engine) {
 		}
 		s.serve(c)
 	}
-	router.GET("/update-packages/:version/:name", handler)
-	router.HEAD("/update-packages/:version/:name", handler)
-	router.GET("/update-packages", s.status)
+	router.GET(prefix+"/:version/:name", handler)
+	router.HEAD(prefix+"/:version/:name", handler)
+	router.GET(prefix, s.status)
 }
 
 func (s *cache) serve(c *gin.Context) {
