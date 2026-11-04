@@ -1,4 +1,4 @@
-// Generated from packages/i18n/platform/remote_command_messages.go. Do not edit.
+// Generated from @remoteai/i18n/platform/admin/remote_command_messages.go.txt. Do not edit.
 package devices
 
 // The readable fallback keeps older command clients compatible with structured errors.

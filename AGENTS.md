@@ -14,8 +14,10 @@
   `npm run check:i18n`, and deployment guard tests for relevant changes. Do not weaken tests.
 - `legacy-contract.json` and `validation-oracle.json` are frozen regression fixtures with provenance in
   `testdata/legacy-source.json`. New behavior belongs in Go code and independent Go tests.
-- Translatable backend platform messages are owned by `packages/i18n/platform/` and generated through
-  its manifest. Run `npm run generate:i18n` and `npm run check:i18n`; do not edit generated copies.
+- Translatable backend platform messages are owned by `piperhex/remoteai-i18n` and consumed through its
+  immutable npm-compatible GitHub release. Run `npm ci`, `npm run generate:i18n` and `npm run check:i18n`.
+  Edit sources in that repository, publish a new version, then update this dependency and lockfile.
+  Do not edit generated Go copies or maintain a separate translation package here.
 - Admin UI is a separate repository supplied to Docker as the named `admin-ui` build context.
   Do not import parent or sibling files in ordinary builds. Explicit cross-client integration tests
   may use a parent checkout identified by `REMOTEAI_SOURCE`.

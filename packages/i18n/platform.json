@@ -1,8 +1,0 @@
-{
-  "mirrors": [
-    {
-      "source": "platform/remote_command_messages.go",
-      "target": "internal/devices/remote_command_messages.go"
-    }
-  ]
-}

@@ -1,3 +1,10 @@
+FROM node:22-alpine AS localization
+WORKDIR /source
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts --no-audit --no-fund
+COPY internal/devices/remote_command_messages.go ./internal/devices/remote_command_messages.go
+RUN npm run check:i18n
+
 FROM node:22-alpine AS ui
 WORKDIR /source
 ARG NPM_REGISTRY=https://registry.npmjs.org
@@ -13,6 +20,7 @@ ENV CGO_ENABLED=0
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY . ./
+COPY --from=localization /source/internal/devices/remote_command_messages.go ./internal/devices/remote_command_messages.go
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     go build -trimpath -ldflags="-s -w" -o /admin ./cmd/admin
 

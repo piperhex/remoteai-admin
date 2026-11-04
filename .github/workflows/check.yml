@@ -15,6 +15,7 @@ jobs:
         with:
           node-version: '22'
       - run: test -z "$(gofmt -l .)"
+      - run: npm ci
       - run: npm run check
       - run: go test ./internal/server -run TestKong -count=1
       - name: Verify Compose and relay deployment guards

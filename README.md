@@ -10,10 +10,16 @@ Install the Go toolchain declared in `go.mod`, Node.js 22 for fixture and transl
 and Redis. Copy `.env.example` to `.env`, configure local credentials, then run:
 
 ```sh
+npm ci
 go run ./cmd/admin
 go build -o dist/ ./cmd/admin
 npm run check
 ```
+
+Platform translations are maintained in [remoteai-i18n](https://github.com/piperhex/remoteai-i18n).
+This repository pins its immutable release archive and lockfile. Run `npm run generate:i18n` after an
+explicit dependency update; `npm run check:i18n` verifies the generated Go file with the package's `admin`
+profile. Docker also verifies it before compiling. Do not edit the generated messages or create local dictionaries.
 
 For the interface, clone `remoteai-admin-ui` alongside this repository, run `npm ci`, then `npm run dev`.
 Open `http://127.0.0.1:1421/admin.html`; its development proxy connects to backend port 8080.

@@ -410,7 +410,7 @@ Redis 使用持久卷。已有数据服务不执行这组新装命令。Kong 网
 ## 本地验证、构建和打包
 
 先确认目标提交已提交且工作区干净；存在其他改动时使用独立检出目录。
-在本仓库运行 `npm run check`，在管理界面仓库运行 `npm ci && npm run check`，
+在本仓库运行 `npm ci && npm run check`，在管理界面仓库运行 `npm ci && npm run check`，
 然后执行 Docker 的 `verify` 阶段（Linux race tests 与 vet）。
 首次迁移或修改认证、数据格式、PC/手机协议时，还需运行 [README](README.md) 中的隔离对照测试。
 
