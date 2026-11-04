@@ -1,0 +1,11 @@
+.git
+.github
+**/node_modules
+.env
+**/.env
+compose.override.yml
+*.exe
+dist
+public
+testdata/bin
+testdata/results

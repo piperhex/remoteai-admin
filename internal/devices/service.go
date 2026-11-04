@@ -6,8 +6,8 @@ import (
 	"time"
 	"unicode/utf16"
 
-	"github.com/codex-switch/admin-go/internal/accounts"
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/accounts"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 	"gorm.io/gorm"
 )
 

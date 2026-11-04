@@ -4,9 +4,9 @@ package devices
 
 import (
 	"encoding/json"
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

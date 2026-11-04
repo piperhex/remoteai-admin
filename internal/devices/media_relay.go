@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/mediarelay"
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/mediarelay"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const desktopCredentialLifetime = time.Hour

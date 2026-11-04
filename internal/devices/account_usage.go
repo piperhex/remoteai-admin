@@ -3,8 +3,8 @@ package devices
 import (
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const accountUsageTimeout = 3 * time.Minute

@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 type assistanceHTTPFixture struct {

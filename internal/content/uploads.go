@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const maxSkillBytes = 1024 * 1024

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/codex-switch/admin-go/internal/readcache"
+	"github.com/piperhex/remoteai-admin/internal/readcache"
 )
 
 func DeviceDirectoryCacheKey(owner string) string { return "client-read:v1:devices:" + owner }

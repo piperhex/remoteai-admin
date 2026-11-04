@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 // Existing grants are kept alive; refresh may only fill vacant slots for the same package.

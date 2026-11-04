@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/telemetryguard"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/telemetryguard"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

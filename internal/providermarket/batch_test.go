@@ -3,8 +3,8 @@ package providermarket
 import (
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func TestBatchValidationAndPermissions(t *testing.T) {

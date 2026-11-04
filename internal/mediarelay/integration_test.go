@@ -20,7 +20,7 @@ import (
 // No production credentials, databases, devices or relay configuration are used.
 func TestCoturnBrowserVideoAndControls(t *testing.T) {
 	if os.Getenv("COTURN_INTEGRATION") != "1" {
-		t.Skip("set COTURN_INTEGRATION=1 with Docker and Edge installed")
+		t.Skip("set COTURN_INTEGRATION=1 with Docker, bundled Playwright Chromium and REMOTEAI_SOURCE configured")
 	}
 	previous := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})))
@@ -103,7 +103,10 @@ func browserRelay(t *testing.T, protocol string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	root := filepath.Clean(filepath.Join(directory, "../../../.."))
+	root := os.Getenv("REMOTEAI_SOURCE")
+	if root == "" {
+		root = filepath.Clean(filepath.Join(directory, "../../../.."))
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	command := exec.CommandContext(ctx, "node", filepath.Join(root, "node_modules/@playwright/test/cli.js"),

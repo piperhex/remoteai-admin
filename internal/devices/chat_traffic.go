@@ -7,8 +7,8 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/codex-switch/admin-go/internal/chattraffic"
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/chattraffic"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 type relayDelivery struct {

@@ -60,7 +60,7 @@ IPv4 按地址计数，IPv6 按 /64 计数。Redis 键不直接保存 IP 或设�
 错误请求、可信代理和故障关闭测试。额外的本地集成测试：
 
 ```sh
-node apps/admin-go/scripts/telemetry-smoke.mjs
+node scripts/telemetry-smoke.mjs
 ```
 
 该脚本仅连接固定本地对照环境，需先运行更新后的 Go 镜像。

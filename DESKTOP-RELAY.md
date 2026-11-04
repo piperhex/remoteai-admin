@@ -5,12 +5,12 @@
 
 ## 部署
 
-在已有 Go 服务的 Compose 文件和私有 override 后追加 `-f apps/admin-go/compose.desktop-relay.yml`。
+在已有 Go 服务的 Compose 文件和私有 override 后追加 `-f compose.desktop-relay.yml`。
 后续更新与回滚必须保留这个文件，避免误删端口和网络配置。先备份环境文件与当前 Go 镜像。
 保持 PostgreSQL、Redis、Kong 和原有配置不变；无需新增数据库表，沿用现有中继额度和结算表。
 
 日常更新与回滚使用 [统一部署入口](DEPLOYMENT.md#加载并更新-go)：
-`python3 -B apps/admin-go/scripts/deployment_compose.py up --project-name admin-go`。
+`python3 -B scripts/deployment_compose.py up --project-name admin-go`。
 它自动保留当前配置并补上已启用的中继文件；重建前检查已公布的中继端口，重建后检查实际端口和网络。
 不要改用仅带基础文件的 `docker compose up`，也不要用 HTTP 或聊天 STUN 成功代替 TURN 验收。
 
@@ -52,10 +52,10 @@ UDP 收包与计量转发使用独立循环，避免一次记账等待阻塞后�
 ```bash
 # 将下列文件参数附加到已核对的原项目、env、override 参数中。
 # coturn 以非 root 用户读取挂载的脚本；环境文件仍应保持私有权限。
-chmod 644 apps/admin-go/scripts/turn-entrypoint.sh
-docker compose ... -f apps/admin-go/compose.desktop-relay.yml config --quiet
-docker compose ... -f apps/admin-go/compose.desktop-relay.yml up -d --no-deps desktop-turn
-docker compose ... -f apps/admin-go/compose.desktop-relay.yml up -d --no-deps --no-build --pull never admin-go
+chmod 644 scripts/turn-entrypoint.sh
+docker compose ... -f compose.desktop-relay.yml config --quiet
+docker compose ... -f compose.desktop-relay.yml up -d --no-deps desktop-turn
+docker compose ... -f compose.desktop-relay.yml up -d --no-deps --no-build --pull never admin-go
 ```
 
 凭据最长一小时且不超过聊天身份有效期，重新连接及持续在线每半小时刷新。已认证的活动分配可以继续刷新；
@@ -76,10 +76,10 @@ ICE 候选、实际视频解码、鼠标、键盘、画质设置、关闭和重�
 
 ```powershell
 $env:COTURN_INTEGRATION='1'
-go -C apps/admin-go test ./internal/mediarelay -run TestCoturnBrowserVideoAndControls -v -count=1
+go test ./internal/mediarelay -run TestCoturnBrowserVideoAndControls -v -count=1
 # 另测 Windows 原生发送器，需已准备视频运行库和 Rust 工具链：
 $env:COTURN_NATIVE_INTEGRATION='1'
-go -C apps/admin-go test ./internal/mediarelay -run TestCoturnBrowserVideoAndControls -v -count=1
+go test ./internal/mediarelay -run TestCoturnBrowserVideoAndControls -v -count=1
 ```
 
 集成测试使用实际启动脚本及容器限制，公布不可路由的文档地址，验证双方强制中继时仍能互通。

@@ -6,9 +6,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/content"
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/content"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 type hotSession struct {

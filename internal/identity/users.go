@@ -2,9 +2,9 @@ package identity
 
 import (
 	"errors"
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"strings"

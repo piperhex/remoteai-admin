@@ -1,8 +1,8 @@
 package accounts
 
 import (
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func (s *service) registerAccountNetwork(r *gin.RouterGroup, read, write gin.HandlerFunc) {

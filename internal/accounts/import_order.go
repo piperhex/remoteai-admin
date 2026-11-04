@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 // Walk raw JSON in document order: account imports expose that order in their result arrays.

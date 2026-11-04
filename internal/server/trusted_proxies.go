@@ -5,8 +5,8 @@ import (
 	"net/netip"
 	"strings"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func configureTrustedProxies(router *gin.Engine, config platform.Config) error {

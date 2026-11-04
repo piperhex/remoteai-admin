@@ -1,7 +1,11 @@
-# admin-go 生产部署
+# Remote AI Admin 生产部署
 
-生产后端只部署 `apps/admin-go`，管理页面与 Go 程序使用同一个镜像。
-`apps/admin` 的 NestJS 源码已冻结，仅用于本地兼容对照测试。
+本仓库独立维护 Go 后端，管理页面由独立的 `remoteai-admin-ui` 仓库构建后打入同一个镜像。
+NestJS 源码已移除。下文命令默认在本仓库根目录执行；主仓库中的子模块路径为 `apps/admin`。
+
+源代码拆分不改变现有生产服务名 `admin-go`、`ADMIN_GO_*` 环境变量或网络别名，也不自动部署。
+已有服务器应保留部署目录与容器记录的完整 Compose 文件列表。若要移动生产部署目录，需单独规划
+Compose 路径迁移，不能绕过下面的部署检查或遗漏 TURN 配置。
 以下命令从仓库根目录执行，不包含任何具体生产主机或凭据。
 
 ## 文本响应压缩
@@ -163,7 +167,7 @@ CDN/WAF、抓包和 APM 中的访问日志、请求/响应内容记录、WebSock
 若上传返回 `fieldModifiedAt.property requestOptions should not exist`，说明服务端入口校验尚未支持新字段。
 必须部署包含 Go Provider 同步契约扩展的镜像；仅执行数据库脚本不能解决此 400。
 即使没有配置高级设置，新客户端也会上传该字段的修改时间。部署后验证单条和批量上传，
-覆盖未配置、已配置和清空设置，并运行 `go -C apps/admin-go test ./internal/platform -run TestProviderSyncContract`。
+覆盖未配置、已配置和清空设置，并运行 `go test ./internal/platform -run TestProviderSyncContract`。
 
 ## 官方模型列表缓存
 
@@ -316,7 +320,7 @@ Redis 确认额度 fence；只允许一次 writer claim，不接管或重新使�
 尚未解决的租约占用。回滚到不认识此表的旧 Go 镜像之前，必须停止新租约并完成全部未知额度对账，
 确认不存在 `reserved>0`，再使用已验证镜像；不要删除记录、清空 Redis 或用 TTL 模拟退款。
 本轮没有开启生产开关或部署。目标设备内存、弱网、RPC P95 与完整下载耗时门槛见
-[下载管理与验收](../../docs/mobile-download-manager.md)，未满足门槛前保持两个开关关闭。
+[下载管理与验收](https://github.com/piperhex/remoteai/blob/master/docs/mobile-download-manager.md)，未满足门槛前保持两个开关关闭。
 
 ## 手机推送与 Windows 无人值守（2026-09-28）
 
@@ -324,7 +328,7 @@ Redis 确认额度 fence；只允许一次 writer claim，不接管或重新使�
 `sql/20260928-desktop-service.sql`，然后更新 Go 镜像。两项功能默认关闭。
 推送使用 Expo 转发 APNs；服务器设置 `CHAT_PUSH_ENABLED=true`，按项目配置
 `EXPO_PUSH_ACCESS_TOKEN`。移动构建设置和真机验收步骤见
-[远程可靠性说明](../../docs/remote-reliability.md)。禁止将访问令牌放进客户端构建变量。
+[远程可靠性说明](https://github.com/piperhex/remoteai/blob/master/docs/remote-reliability.md)。禁止将访问令牌放进客户端构建变量。
 
 Windows 无人值守设置 `DESKTOP_SERVICE_ENABLED=true`，并更新桌面、手机和 Web。
 普通账号认证的 `/devices/:deviceId/service-credential` 用于颁发和撤销设备授权；
@@ -341,7 +345,7 @@ Kong 新增受保护路径 `/chat-push`，新增直达 Go 的 `/desktop-service/
 
 回滚仅使用已验证的 Go 镜像并保留新增表。先关闭以上开关、撤销服务授权并在电脑上停用服务。
 服务端推送队列会保留未完成记录，回滚期间不发送；不要删除队列来模拟成功投递。
-Windows 安装、锁屏/登录验收与限制见 [无人值守说明](../../docs/windows-unattended.md)。
+Windows 安装、锁屏/登录验收与限制见 [无人值守说明](https://github.com/piperhex/remoteai/blob/master/docs/windows-unattended.md)。
 
 ## 设备上报防刷（2026-09-24）
 
@@ -381,7 +385,7 @@ Redis 故障时转发停止放行，P2P 不受此计费路径影响；不能退�
 项目名、所有 Compose 文件、网络、端口与数据容器的 ID/启动时间。保留服务器上的 `.env`
 和 `compose.override.yml`；不要用示例覆盖现有配置。正常更新只操作 `admin-go`。
 
-新安装先复制 `apps/admin-go/.env.example` 为同目录的 `.env`，设置真实数据库密码，
+新安装先复制 `.env.example` 为同目录的 `.env`，设置真实数据库密码，
 为 `KONG_JWT_SECRET`、`JWT_REFRESH_SECRET` 分别生成随机密钥，并限制文件访问权限。
 `KONG_JWT_KEY` 与 Kong JWT credential 的 key 保持一致；已有安装的三个值必须保持原样。
 管理配置中的 SMTP 等密文也依赖原密钥，不能在升级时重新生成。
@@ -396,8 +400,8 @@ Redis 故障时转发停止放行，P2P 不受此计费路径影响；不能退�
 ```sh
 docker network create codex-switch-data
 sudo install -d -m 0750 /srv/codex-switch/postgres
-docker compose --project-name codex-switch-data --env-file apps/admin-go/.env \
-  -f apps/admin-go/compose.infrastructure.yml up -d postgres redis
+docker compose --project-name codex-switch-data --env-file .env \
+  -f compose.infrastructure.yml up -d postgres redis
 ```
 
 这份文件不运行 NestJS，也不启动 Go 或 Kong。PostgreSQL 使用配置的宿主机目录，
@@ -406,7 +410,7 @@ Redis 使用持久卷。已有数据服务不执行这组新装命令。Kong 网
 ## 本地验证、构建和打包
 
 先确认目标提交已提交且工作区干净；存在其他改动时使用独立检出目录。
-运行 `npm run check:backend`、`npm run check -w @codex-switch/admin-ui`，
+在本仓库运行 `npm run check`，在管理界面仓库运行 `npm ci && npm run check`，
 然后执行 Docker 的 `verify` 阶段（Linux race tests 与 vet）。
 首次迁移或修改认证、数据格式、PC/手机协议时，还需运行 [README](README.md) 中的隔离对照测试。
 
@@ -415,9 +419,9 @@ Redis 使用持久卷。已有数据服务不执行这组新装命令。Kong 网
 ```powershell
 $targetCommit = (git rev-parse HEAD).Trim()
 $imageTag = "codex-switch/admin-go:$targetCommit"
-docker build --platform linux/amd64 -f apps/admin-go/Dockerfile --target verify -t codex-admin-go:verify .
+docker build --platform linux/amd64 -f Dockerfile --target verify -t codex-admin-go:verify .
 if ($LASTEXITCODE -ne 0) { throw 'Go container verification failed' }
-docker build --platform linux/amd64 -f apps/admin-go/Dockerfile -t $imageTag .
+docker build --platform linux/amd64 --build-context admin-ui=../admin-ui -f Dockerfile -t $imageTag .
 if ($LASTEXITCODE -ne 0) { throw 'Production image build failed' }
 $imageId = (docker image inspect $imageTag --format '{{.Id}}').Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Image inspection failed' }
@@ -491,9 +495,9 @@ PC 发起端和被控端都需要带 TCP 协商的版本；仅更新被控端不
 
 ```bash
 # 替换为当前容器记录的实际 Compose 项目名。
-npm run deploy:admin -- check --project-name admin-go
-npm run deploy:admin -- up --project-name admin-go
-npm run deploy:admin -- verify --project-name admin-go
+python3 -B scripts/deployment_compose.py check --project-name admin-go
+python3 -B scripts/deployment_compose.py up --project-name admin-go
+python3 -B scripts/deployment_compose.py verify --project-name admin-go
 
 npm run deploy:web -- check --project-name web
 npm run deploy:web -- up --project-name web
@@ -519,9 +523,9 @@ Web 更新只操作 `web`，不构建、不拉取镜像、不重启依赖，等�
 
 ```bash
 set -Eeuo pipefail
-python3 -B apps/admin-go/scripts/deployment_compose.py check --project-name admin-go
-python3 -B apps/admin-go/scripts/deployment_compose.py up --project-name admin-go
-python3 -B apps/admin-go/scripts/deployment_compose.py verify --project-name admin-go
+python3 -B scripts/deployment_compose.py check --project-name admin-go
+python3 -B scripts/deployment_compose.py up --project-name admin-go
+python3 -B scripts/deployment_compose.py verify --project-name admin-go
 ```
 
 入口从当前容器的 Compose 标签保留完整文件列表和顺序，包括私有覆盖文件及其他可选服务配置。
@@ -536,7 +540,7 @@ python3 -B apps/admin-go/scripts/deployment_compose.py verify --project-name adm
 它不会创建或启动 TURN 后端，新装中继仍按 [DESKTOP-RELAY.md](DESKTOP-RELAY.md) 单独准备。
 `verify` 核对实际运行状态、端口和共享网络；公网连通性和真实视频连接仍需完成下文的验收。
 
-本地回归检查：`python -B -m unittest discover -s apps/admin-go/scripts -p 'test_deployment_*.py' -v`。
+本地回归检查：`python -B -m unittest discover -s scripts -p 'test_deployment_*.py' -v`。
 设置 `COMPOSE_CONFIG_TEST=1` 会额外使用临时配置验证真实 Compose 合并，无需启动容器或访问生产。
 
 不要在加载本地镜像后重新构建，不运行整栈 `down` 或 `--remove-orphans`。
@@ -562,7 +566,7 @@ JWT 插件使用 `key_claim_name=iss`、`claims_to_verify=exp`、`run_on_preflig
 `/web` 指向独立 Web 服务并启用 `strip_path=true`。
 
 新增接口时同步维护示例配置，避免仅在线上添加路由。运行
-`go -C apps/admin-go test ./internal/server -run TestKong -count=1`，
+`go test ./internal/server -run TestKong -count=1`，
 将 Go 实际注册的全部接口与示例逐一对照，同时检查上游、路径保留和主要鉴权边界。
 此项检查已包含在 Go 测试和部署配置 CI 中；部署时仍需核对线上配置与示例的差异。
 
@@ -584,7 +588,7 @@ Go 为兼容旧接口保留了 `X-Powered-By: Express`，该响应头不能判�
 - 验证数据库、Redis 未被重建或重启；删除临时测试账号并保存部署记录。
 
 出现确认的更新故障时，恢复已记录的上一版 admin-go 镜像及其兼容配置，使用同一 Compose
-项目和文件执行 `python3 -B apps/admin-go/scripts/deployment_compose.py up --project-name admin-go --force-recreate`，
+项目和文件执行 `python3 -B scripts/deployment_compose.py up --project-name admin-go --force-recreate`，
 再执行相同验收。回滚只使用 Go 镜像，不启动 NestJS；不自动恢复数据库备份覆盖在线数据。
 首次迁移在旧服务停止前完成并行验证；缺少已验证的 Go 回滚镜像时应在切换前解决这一条件。
 

@@ -58,7 +58,7 @@ tests. The fixture only connects to disposable local PostgreSQL at `127.0.0.1:15
 PostgreSQL schemas and never reads deployment credentials. Start the local parity dependencies described in
 [README.md](README.md), or use equivalent disposable containers with these ports and credentials.
 
-From `apps/admin-go`, with those dependencies running:
+From this repository, with those dependencies running:
 
 ```powershell
 $env:CLIENT_READ_CACHE_TEST = '1'

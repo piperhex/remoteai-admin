@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gorilla/websocket"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const bulkRelayMagic = "CSF1"

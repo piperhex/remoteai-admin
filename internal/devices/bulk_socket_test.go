@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gorilla/websocket"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func TestBulkRoutingRequiresSessionMembershipAndUsesAuthenticatedOwnership(t *testing.T) {

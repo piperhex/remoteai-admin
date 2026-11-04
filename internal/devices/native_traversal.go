@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func nativeTraversalConfig(config platform.Config) (platform.JSON, error) {

@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/bandwidth"
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/bandwidth"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 	"gorm.io/gorm"
 )
 

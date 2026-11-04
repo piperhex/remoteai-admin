@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -6,7 +7,8 @@ import { upgradeParityDatabase } from './upgrade-parity.mjs';
 
 const require = createRequire(new URL('../testdata/tools/package.json', import.meta.url));
 const { Client } = require('pg');
-const compose = ['compose', '-f', 'apps/admin-go/compose.test.yml'];
+assert.ok(process.env.LEGACY_ADMIN_IMAGE, 'Set LEGACY_ADMIN_IMAGE to an archived local fixture image; NestJS source is retired.');
+const compose = ['compose', '-f', fileURLToPath(new URL('../compose.test.yml', import.meta.url)), '--profile', 'legacy'];
 execFileSync('docker', [...compose, 'up', '-d', '--build', 'legacy', 'redis-go', 'oauth'], { stdio: 'inherit' });
 let ready = false;
 for (let attempt = 0; attempt < 120; attempt += 1) {

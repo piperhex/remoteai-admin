@@ -55,10 +55,10 @@ fixture (`127.0.0.1:16380`). It never loads deployment configuration.
 ```powershell
 $env:CLIENT_READ_CACHE_TEST='1'
 $env:ADMIN_GO_TRAFFIC_DB_TEST='1'
-go -C apps/admin-go test ./internal/devices ./internal/chattraffic ./internal/content ./internal/readcache ./internal/server
-go -C apps/admin-go test -race ./internal/devices ./internal/chattraffic ./internal/content ./internal/readcache ./internal/server
-go -C apps/admin-go vet ./...
-go -C apps/admin-go test ./internal/server -run TestKong
+go test ./internal/devices ./internal/chattraffic ./internal/content ./internal/readcache ./internal/server
+go test -race ./internal/devices ./internal/chattraffic ./internal/content ./internal/readcache ./internal/server
+go vet ./...
+go test ./internal/server -run TestKong
 ```
 
 Race tests require a working C toolchain; Linux can use the same loopback fixtures.

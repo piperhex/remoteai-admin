@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const defaultIssuer = "https://auth.openai.com"

@@ -63,7 +63,7 @@ There is no inference here about runtime leaks, Mermaid, or earlier build OOMs.
 From the repository root, run the current implementation:
 
 ```powershell
-go -C apps/admin-go test -p 2 ./internal/lounge -run '^$' -bench BenchmarkContactPresence -benchmem -benchtime=500ms -count=3 -cpu=2
+go test -p 2 ./internal/lounge -run '^$' -bench BenchmarkContactPresence -benchmem -benchtime=500ms -count=3 -cpu=2
 ```
 
 To reproduce the baseline, export `apps/admin-go` from `04776426e` to a separate directory with `git archive`,
@@ -76,9 +76,9 @@ only in fixture/index initialization and invoking the original no-argument globa
 Executed against the final Go source:
 
 ```powershell
-go -C apps/admin-go test -p 2 ./internal/lounge -count=3 -json
-go -C apps/admin-go test -p 2 ./internal/server -run TestKong -count=1 -json
-go -C apps/admin-go vet -p 2 ./internal/lounge
+go test -p 2 ./internal/lounge -count=3 -json
+go test -p 2 ./internal/server -run TestKong -count=1 -json
+go vet -p 2 ./internal/lounge
 ```
 
 Lounge: 52 top-level tests x 3 runs = 156 passed, zero failed. Kong: 2 passed, zero failed.

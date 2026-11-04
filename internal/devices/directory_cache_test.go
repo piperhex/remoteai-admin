@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/readcache"
-	"github.com/codex-switch/admin-go/internal/readcache/testfixture"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/readcache"
+	"github.com/piperhex/remoteai-admin/internal/readcache/testfixture"
 )
 
 func TestDeviceDirectoryCachesMetadataAndKeepsPresenceLive(t *testing.T) {

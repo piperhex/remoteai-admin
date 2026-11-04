@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 	"golang.org/x/net/http/httpguts"
 )
 

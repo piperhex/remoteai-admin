@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func TestTCPDiscoveryReportsTheObservedSocket(t *testing.T) {

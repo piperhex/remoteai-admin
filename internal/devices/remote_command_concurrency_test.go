@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func commandFixture(t *testing.T) (*ControlGateway, *peer, *peer) {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/readcache"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/readcache"
 )
 
 // These internal fields are deliberately absent from Device's public JSON representation.

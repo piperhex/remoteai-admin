@@ -4,11 +4,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/chatpush"
-	"github.com/codex-switch/admin-go/internal/lounge"
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/updatecache"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/chatpush"
+	"github.com/piperhex/remoteai-admin/internal/lounge"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/updatecache"
 	"gorm.io/gorm"
 )
 

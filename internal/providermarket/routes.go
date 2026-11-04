@@ -3,8 +3,8 @@ package providermarket
 import (
 	"strings"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 type service struct{ deps *platform.Dependencies }

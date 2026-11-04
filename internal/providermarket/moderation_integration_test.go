@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 type marketTestRequest struct {

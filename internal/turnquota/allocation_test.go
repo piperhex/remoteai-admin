@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/mediarelay"
 	"github.com/google/uuid"
 	"github.com/pion/stun/v3"
+	"github.com/piperhex/remoteai-admin/internal/mediarelay"
 )
 
 const testSecret = "local_turn_quota_test_secret_123456789"

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/goccy/go-yaml"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const kongGoUpstream = "http://codex-switch-admin-go:8080"

@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

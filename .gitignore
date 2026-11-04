@@ -3,3 +3,11 @@
 /coverage.out
 /testdata/results/
 /testdata/bin/
+/admin
+/dist/
+/public/
+node_modules/
+.env
+compose.override.yml
+__pycache__/
+*.log

@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gorilla/websocket"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const relayMagic = "CSB1"

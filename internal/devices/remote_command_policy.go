@@ -3,7 +3,7 @@ package devices
 import (
 	"log/slog"
 
-	"github.com/codex-switch/admin-go/internal/content"
+	"github.com/piperhex/remoteai-admin/internal/content"
 )
 
 // Refresh only on startup and committed admin updates, never on the forwarding path.

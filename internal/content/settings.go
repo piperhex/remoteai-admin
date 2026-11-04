@@ -3,9 +3,9 @@ package content
 import (
 	"context"
 	"errors"
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/readcache"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/readcache"
 	"gorm.io/gorm"
 	"log/slog"
 	"math"

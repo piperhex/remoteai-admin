@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func TestAssistanceChatAccountUsesIDAndDoesNotRevealEmail(t *testing.T) {

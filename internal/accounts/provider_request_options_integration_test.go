@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/migrations"
+	"github.com/piperhex/remoteai-admin/internal/migrations"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

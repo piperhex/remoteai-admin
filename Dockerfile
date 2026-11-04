@@ -1,25 +1,20 @@
 FROM node:22-alpine AS ui
 WORKDIR /source
 ARG NPM_REGISTRY=https://registry.npmjs.org
-COPY package.json package-lock.json ./
-COPY apps/admin-ui/package.json ./apps/admin-ui/
-COPY packages/i18n/package.json ./packages/i18n/
-RUN --mount=type=cache,target=/root/.npm npm ci --workspace @codex-switch/admin-ui \
+COPY --from=admin-ui / /source/
+RUN --mount=type=cache,target=/root/.npm npm ci \
     --ignore-scripts --no-audit --no-fund --registry=$NPM_REGISTRY
-COPY apps/admin-ui ./apps/admin-ui
-COPY packages/i18n ./packages/i18n
-COPY shared ./shared
-RUN npm run build --workspace @codex-switch/admin-ui
+RUN npm run build
 
 FROM golang:1.26.8-alpine AS build
 WORKDIR /source
 ARG GOPROXY=https://proxy.golang.org,direct
 ENV CGO_ENABLED=0
-COPY apps/admin-go/go.mod apps/admin-go/go.sum ./
+COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
-COPY apps/admin-go ./
+COPY . ./
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    go build -trimpath -ldflags="-s -w" -o /admin-go ./cmd/admin-go
+    go build -trimpath -ldflags="-s -w" -o /admin ./cmd/admin
 
 FROM build AS verify
 RUN apk add --no-cache gcc musl-dev redis
@@ -32,7 +27,7 @@ FROM scratch AS runtime
 WORKDIR /app
 ENV NODE_ENV=production LISTEN_PORT=8080
 COPY --from=ui /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=ui /source/apps/admin-go/public ./public
-COPY --from=build /admin-go /admin-go
+COPY --from=ui /source/dist ./public
+COPY --from=build /admin /admin
 EXPOSE 8080 3478/udp
-ENTRYPOINT ["/admin-go"]
+ENTRYPOINT ["/admin"]

@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import http from 'node:http';
 import net from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
-import { build } from 'esbuild';
+import { createRequire } from 'node:module';
+const { build } = createRequire(new URL('../testdata/tools/package.json', import.meta.url))('esbuild');
 import { Socket } from './parity-devices.mjs';
 import { request, fixtureUsers, fixturePassword } from './parity-client.mjs';
 import { fixtureDatabase, seedParity } from './seed-parity.mjs';
@@ -17,7 +20,7 @@ const compiled = await build({ stdin: { contents: [
   "export { BulkCipher } from './shared/remote-chat/bulkCipher.ts';",
   "export { BulkTransport } from './shared/remote-chat/bulkTransport.ts';",
   "export { MappingStreamMux, STREAM_MANIFEST } from './shared/port-mapping/streamMux.ts';",
-].join('\n'), resolveDir: process.cwd() }, bundle: true, platform: 'node', format: 'esm', write: false });
+].join('\n'), resolveDir: path.resolve(process.env.REMOTEAI_SOURCE ?? fileURLToPath(new URL('../../../', import.meta.url))) }, bundle: true, platform: 'node', format: 'esm', write: false });
 const { BulkCipher, BulkTransport, MappingStreamMux, STREAM_MANIFEST } = await import(
   `data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString('base64')}`);
 

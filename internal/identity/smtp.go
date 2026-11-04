@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 // MailOptions describes a notification sent using a configured SMTP service.

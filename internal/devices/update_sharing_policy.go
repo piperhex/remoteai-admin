@@ -3,8 +3,8 @@ package devices
 import (
 	"log/slog"
 
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/updatesharing"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/updatesharing"
 )
 
 // Enforce the global scope before either the local or Redis matcher sees a request.

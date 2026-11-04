@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/readcache"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/readcache"
 )
 
 // User existence, disabled status, role assignment and role revision stay authoritative on

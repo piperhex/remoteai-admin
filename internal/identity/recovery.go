@@ -9,8 +9,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

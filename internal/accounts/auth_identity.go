@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func normalizeAuth(auth object) (object, error) {

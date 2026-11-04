@@ -7,7 +7,7 @@
 
 备份 PostgreSQL、Redis、现有配置和网关路由。保留 `KONG_JWT_KEY`、`KONG_JWT_SECRET`、
 `JWT_REFRESH_SECRET`、token TTL、SMTP、OAuth 与出站代理实际配置，不能用示例密钥替换。
-确认数据库支持目标版本，缺失的增量升级从 `apps/admin-go/sql` 中选择并单独执行。
+确认数据库支持目标版本，缺失的增量升级从 `sql` 中选择并单独执行。
 迁移 SQL 目录本身不改变数据库，也不需要重复运行已经应用的升级。
 生产保持 `POSTGRES_DB_SYNCHRONIZE=false`；Go 的初始化逻辑不会升级已有表。
 

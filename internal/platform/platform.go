@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/bandwidth"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/bandwidth"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )

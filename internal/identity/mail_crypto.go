@@ -8,7 +8,7 @@ import (
 	"encoding/base64"
 	"strings"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func (s *service) mailCipher() (cipher.AEAD, error) {

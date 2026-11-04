@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const maxBodyBytes = 4096

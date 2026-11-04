@@ -2,8 +2,10 @@ services:
   admin-go:
     image: ${ADMIN_GO_IMAGE:-codex-switch/admin-go:local}
     build:
-      context: ../..
-      dockerfile: apps/admin-go/Dockerfile
+      context: .
+      dockerfile: Dockerfile
+      additional_contexts:
+        admin-ui: ${ADMIN_UI_CONTEXT:-../admin-ui}
     env_file: .env
     environment:
       CHAT_STUN_PORT: "${CHAT_STUN_PORT:-3478}"

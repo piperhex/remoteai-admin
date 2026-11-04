@@ -3,7 +3,7 @@ package accounts
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 	"strings"
 )
 

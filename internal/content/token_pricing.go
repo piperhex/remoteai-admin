@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/tokenpricing"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/tokenpricing"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

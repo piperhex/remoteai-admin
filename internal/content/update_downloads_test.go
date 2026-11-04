@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/updatesharing"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/updatesharing"
 )
 
 func TestDownloadReportValidationAndAuthentication(t *testing.T) {

@@ -10,10 +10,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const heartbeatInterval = 25 * time.Second

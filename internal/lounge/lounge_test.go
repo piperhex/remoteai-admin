@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func fixture(t *testing.T) (*hub, string) {

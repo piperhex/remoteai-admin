@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/chattraffic"
+	"github.com/piperhex/remoteai-admin/internal/chattraffic"
 )
 
 type bulkWriter struct {

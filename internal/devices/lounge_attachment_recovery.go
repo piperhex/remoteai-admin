@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const attachmentSearchTimeout = 5 * time.Second

@@ -1,4 +1,4 @@
-module github.com/codex-switch/admin-go
+module github.com/piperhex/remoteai-admin
 
 go 1.25.0
 

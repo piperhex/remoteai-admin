@@ -8,10 +8,10 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/readcache"
-	"github.com/codex-switch/admin-go/internal/updatesharing"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/readcache"
+	"github.com/piperhex/remoteai-admin/internal/updatesharing"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

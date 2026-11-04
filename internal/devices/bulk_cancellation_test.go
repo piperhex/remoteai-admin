@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/chattraffic"
+	"github.com/piperhex/remoteai-admin/internal/chattraffic"
 )
 
 type bulkMeterFunc func(context.Context, chattraffic.BulkLeaseScope, []chattraffic.BulkWrite) error

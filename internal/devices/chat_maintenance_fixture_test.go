@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/chattraffic"
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/readcache/testfixture"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/chattraffic"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/readcache/testfixture"
 )
 
 func maintenanceStore(t *testing.T) testfixture.Store {

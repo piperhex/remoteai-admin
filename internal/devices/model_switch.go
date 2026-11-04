@@ -1,6 +1,6 @@
 package devices
 
-import "github.com/codex-switch/admin-go/internal/platform"
+import "github.com/piperhex/remoteai-admin/internal/platform"
 
 // Keep GUI and proxy choices independent, including explicit clearing of the other source kind.
 func modelSwitchPatch(path, value string) platform.JSON {

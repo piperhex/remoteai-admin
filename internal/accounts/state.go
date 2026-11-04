@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"sort"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 )

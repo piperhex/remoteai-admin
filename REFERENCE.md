@@ -17,7 +17,7 @@ The first four incorrect passwords also keep that response. Doubling saturates o
 maximum duration representable by Go (approximately 292 years), preventing integer overflow.
 
 Existing installations must apply `sql/20260923-user-login-locks.sql` before updating the app.
-New empty databases include this table automatically. From `apps/admin-go`, run
+New empty databases include this table automatically. From this repository, run
 `go test -tags integration ./internal/identity` with the local parity PostgreSQL and Redis running
 to verify lockouts, recovery and simultaneous attempts using disposable fixture accounts.
 These Go-only behaviors intentionally extend the frozen legacy authentication contract.

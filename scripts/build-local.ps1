@@ -10,7 +10,7 @@ try {
     $env:GOOS = 'linux'
     $env:GOARCH = 'amd64'
     $env:CGO_ENABLED = '0'
-    & $goExecutable build -trimpath -o testdata/bin/admin-go ./cmd/admin-go
+    & $goExecutable build -trimpath -o testdata/bin/admin ./cmd/admin
     if ($LASTEXITCODE -ne 0) { throw 'Go build failed' }
 } finally {
     $env:GOOS = $previousGOOS

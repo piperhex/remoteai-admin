@@ -1,4 +1,6 @@
 services:
   admin-go:
     build:
-      dockerfile: apps/admin-go/testdata/Dockerfile.local
+      dockerfile: testdata/Dockerfile.local
+    volumes:
+      - ${ADMIN_UI_PUBLIC:-../admin-ui/dist}:/app/public:ro

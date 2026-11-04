@@ -3,9 +3,9 @@ package identity
 import (
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/readcache/testfixture"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/readcache/testfixture"
 	"github.com/redis/go-redis/v9"
 )
 

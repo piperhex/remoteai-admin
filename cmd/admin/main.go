@@ -10,12 +10,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/accounts"
-	"github.com/codex-switch/admin-go/internal/identity"
-	"github.com/codex-switch/admin-go/internal/migrations"
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/server"
-	"github.com/codex-switch/admin-go/internal/turnquota"
+	"github.com/piperhex/remoteai-admin/internal/accounts"
+	"github.com/piperhex/remoteai-admin/internal/identity"
+	"github.com/piperhex/remoteai-admin/internal/migrations"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/server"
+	"github.com/piperhex/remoteai-admin/internal/turnquota"
 )
 
 func main() {

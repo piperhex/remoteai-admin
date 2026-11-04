@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/chattraffic"
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/chattraffic"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

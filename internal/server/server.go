@@ -5,15 +5,15 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/codex-switch/admin-go/internal/accounts"
-	"github.com/codex-switch/admin-go/internal/content"
-	"github.com/codex-switch/admin-go/internal/devices"
-	"github.com/codex-switch/admin-go/internal/identity"
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/providermarket"
-	"github.com/codex-switch/admin-go/internal/sshprofiles"
-	"github.com/codex-switch/admin-go/internal/telemetryguard"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/accounts"
+	"github.com/piperhex/remoteai-admin/internal/content"
+	"github.com/piperhex/remoteai-admin/internal/devices"
+	"github.com/piperhex/remoteai-admin/internal/identity"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/providermarket"
+	"github.com/piperhex/remoteai-admin/internal/sshprofiles"
+	"github.com/piperhex/remoteai-admin/internal/telemetryguard"
 )
 
 func New(deps *platform.Dependencies) (*gin.Engine, *devices.Runtime, error) {

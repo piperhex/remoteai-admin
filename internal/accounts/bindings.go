@@ -1,9 +1,9 @@
 package accounts
 
 import (
-	"github.com/codex-switch/admin-go/internal/identity"
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/identity"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 	"log/slog"
 	"sync"
 )

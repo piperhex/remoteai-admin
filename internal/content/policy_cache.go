@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/readcache"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/readcache"
 )
 
 const chatPolicyCacheKey = "client-read:v1:chat-policy"

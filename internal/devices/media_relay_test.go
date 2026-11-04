@@ -1,7 +1,7 @@
 package devices
 
 import (
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 	"testing"
 	"time"
 )

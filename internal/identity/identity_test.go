@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func fixtureService() *service {

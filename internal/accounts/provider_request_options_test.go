@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func providerOptionsFixture() object {

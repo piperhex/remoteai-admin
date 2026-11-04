@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const stunCookie uint32 = 0x2112a442

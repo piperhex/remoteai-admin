@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/piperhex/remoteai.git",
+  "revision": "2f030f01b33e82ca1134fa6b99aa370551767c1a",
+  "path": "apps/admin",
+  "fixtures": {
+    "internal/platform/legacy-contract.json": "b501af7e19e0aec083c209bc88a56c59b5465d859986f12a7598193f7d6cdf22",
+    "testdata/validation-oracle.json": "7f7d60dfddb09923ff4262dd9a9c8881d22e05b5b97ff3f8ce5afce58fffdaeb"
+  }
+}

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const tcpBindingLifetime = 20 * time.Second

@@ -46,9 +46,8 @@ services:
       timeout: 3s
       retries: 30
   legacy:
-    build:
-      context: ../..
-      dockerfile: apps/admin-go/testdata/Dockerfile.legacy
+    profiles: ["legacy"]
+    image: ${LEGACY_ADMIN_IMAGE:-legacy-admin-fixture:unavailable}
     environment: &test-environment
       NODE_ENV: development
       LISTEN_PORT: "8080"
@@ -84,8 +83,10 @@ services:
   admin-go:
     profiles: ["go"]
     build:
-      context: ../..
-      dockerfile: apps/admin-go/Dockerfile
+      context: .
+      dockerfile: Dockerfile
+      additional_contexts:
+        admin-ui: ${ADMIN_UI_CONTEXT:-../admin-ui}
     environment:
       <<: *test-environment
       POSTGRES_DB: admin_go
@@ -93,7 +94,7 @@ services:
       REDIS_HOST: redis-go
       CHAT_BULK_LEASES_ENABLED: "${CHAT_BULK_LEASES_ENABLED:-false}"
     ports: ["127.0.0.1:28081:8080", "127.0.0.1:13478:3478/udp"]
-    volumes: ["./public:/app/public:ro", "./testdata:/fixtures:ro"]
+    volumes: ["${ADMIN_UI_PUBLIC:-../admin-ui/dist}:/app/public:ro", "./testdata:/fixtures:ro"]
     depends_on:
       postgres: {condition: service_healthy}
       redis-go: {condition: service_healthy}

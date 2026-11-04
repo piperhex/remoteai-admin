@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/turnquota"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/turnquota"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

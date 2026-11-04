@@ -3,8 +3,8 @@ package devices
 import (
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/updatesharing"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/updatesharing"
 )
 
 func TestGlobalUpdateSharingScopeCannotBeExpandedByClients(t *testing.T) {

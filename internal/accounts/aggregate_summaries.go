@@ -1,6 +1,6 @@
 package accounts
 
-import "github.com/codex-switch/admin-go/internal/platform"
+import "github.com/piperhex/remoteai-admin/internal/platform"
 
 // AggregateSummaries exposes only enabled choices, without member credentials or routing policies.
 func AggregateSummaries(deps *platform.Dependencies, owner string) ([]platform.JSON, error) {

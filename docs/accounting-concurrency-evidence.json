@@ -89,7 +89,7 @@
   },
   "verification": {
     "packages": {
-      "github.com/codex-switch/admin-go/internal/chattraffic": {
+      "github.com/piperhex/remoteai-admin/internal/chattraffic": {
         "pass": [
           "TestBulkLeaseChargesSameWireBytesWithOneBatch",
           "TestBulkLeaseUnavailableAuthorityNeverCallsWriter",
@@ -142,7 +142,7 @@
         "skip": [],
         "fail": []
       },
-      "github.com/codex-switch/admin-go/internal/server": {
+      "github.com/piperhex/remoteai-admin/internal/server": {
         "pass": [
           "TestCompressionNegotiation/#00",
           "TestCompressionNegotiation/identity",
@@ -199,7 +199,7 @@
         "skip": [],
         "fail": []
       },
-      "github.com/codex-switch/admin-go/internal/devices": {
+      "github.com/piperhex/remoteai-admin/internal/devices": {
         "pass": [
           "TestAccountUsageValidatesInputAndAuthentication",
           "TestAccountUsageRepliesRequireExactAuthenticatedComputer",
@@ -339,7 +339,7 @@
         ],
         "fail": []
       },
-      "github.com/codex-switch/admin-go/internal/mediarelay": {
+      "github.com/piperhex/remoteai-admin/internal/mediarelay": {
         "pass": [
           "TestCertificateRefreshRetainsValidPairDuringManagerFailure",
           "TestAuthenticationRejectsExpiredForgedAndCrossAccountCredentials/valid",
@@ -369,7 +369,7 @@
     "observations": [
       "meter_concurrency_test.go:107: 350ms real Redis pause: relay deadline returned in 30.6459ms"
     ],
-    "race": "ok  \tgithub.com/codex-switch/admin-go/internal/chattraffic\t2.831s\r\nok  \tgithub.com/codex-switch/admin-go/internal/devices\t1.199s\r\nok  \tgithub.com/codex-switch/admin-go/internal/mediarelay\t1.628s\r\nok  \tgithub.com/codex-switch/admin-go/internal/server\t3.301s",
+    "race": "ok  \tgithub.com/piperhex/remoteai-admin/internal/chattraffic\t2.831s\r\nok  \tgithub.com/piperhex/remoteai-admin/internal/devices\t1.199s\r\nok  \tgithub.com/piperhex/remoteai-admin/internal/mediarelay\t1.628s\r\nok  \tgithub.com/piperhex/remoteai-admin/internal/server\t3.301s",
     "commands": [
       "ADMIN_GO_TRAFFIC_DB_TEST=1 ADMIN_GO_TRAFFIC_LOAD_TEST=1 go test ./internal/chattraffic ./internal/devices ./internal/mediarelay ./internal/server -count=1 -json -timeout 2m",
       "go test ./internal/server -run TestKong -count=1",

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func TestAggregateSummariesExposeOnlyEnabledPublicChoices(t *testing.T) {

@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/mediarelay"
+	"github.com/piperhex/remoteai-admin/internal/mediarelay"
 )
 
 func unusedAddress(t *testing.T) string {

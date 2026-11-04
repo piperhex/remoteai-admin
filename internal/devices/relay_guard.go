@@ -5,8 +5,8 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/codex-switch/admin-go/internal/chattraffic"
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/chattraffic"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 var errRelaySkipped = errors.New("relay frame skipped")

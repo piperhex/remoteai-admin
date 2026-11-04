@@ -105,9 +105,9 @@ $env:ADMIN_GO_TRAFFIC_DB_TEST = '1'
 $env:ADMIN_GO_TRAFFIC_POSTGRES_PORT = '15439'
 $env:ADMIN_GO_TRAFFIC_REDIS_PORT = '16389'
 $env:ADMIN_GO_TRAFFIC_LOAD_TEST = '1'
-go -C apps/admin-go test ./internal/chattraffic -count=3 -v -timeout 2m
-go -C apps/admin-go test ./internal/chattraffic ./internal/devices ./internal/mediarelay ./internal/server
-go -C apps/admin-go test ./internal/server -run TestKong -count=1
+go test ./internal/chattraffic -count=3 -v -timeout 2m
+go test ./internal/chattraffic ./internal/devices ./internal/mediarelay ./internal/server
+go test ./internal/server -run TestKong -count=1
 ```
 
 On a host with a C compiler, repeat the package tests using `-race`. This verification

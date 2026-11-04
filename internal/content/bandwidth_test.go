@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/bandwidth"
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/bandwidth"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func TestBandwidthRequiresDashboardPermission(t *testing.T) {

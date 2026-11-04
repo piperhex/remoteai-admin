@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/updatesharing"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/updatesharing"
 )
 
 func (s *service) updateDownloadRoutes(r *gin.Engine) {

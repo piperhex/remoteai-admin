@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 // Renewal keeps the authenticated socket and its session proofs; identity changes require a new login.

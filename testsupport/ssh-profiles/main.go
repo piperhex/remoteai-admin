@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/codex-switch/admin-go/internal/migrations"
-	"github.com/codex-switch/admin-go/internal/platform"
-	"github.com/codex-switch/admin-go/internal/sshprofiles"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/migrations"
+	"github.com/piperhex/remoteai-admin/internal/platform"
+	"github.com/piperhex/remoteai-admin/internal/sshprofiles"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

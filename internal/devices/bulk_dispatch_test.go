@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gorilla/websocket"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 func bulkTestDelivery(t *testing.T, source, target *peer) (*chatSessions, relayDelivery) {

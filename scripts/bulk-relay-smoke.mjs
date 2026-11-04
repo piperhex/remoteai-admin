@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import { build } from 'esbuild';
+import { createRequire } from 'node:module';
+const { build } = createRequire(new URL('../testdata/tools/package.json', import.meta.url))('esbuild');
 import { Socket } from './parity-devices.mjs';
 import { request, fixtureUsers, fixturePassword } from './parity-client.mjs';
 import { fixtureDatabase, seedParity } from './seed-parity.mjs';
@@ -13,7 +16,7 @@ const recordPayload = 16384 - 72 - 16;
 const sockets = [];
 const deviceId = randomUUID();
 const compiled = await build({ stdin: { contents:
-  "export { BulkCipher } from './shared/remote-chat/bulkCipher.ts';", resolveDir: process.cwd() },
+  "export { BulkCipher } from './shared/remote-chat/bulkCipher.ts';", resolveDir: path.resolve(process.env.REMOTEAI_SOURCE ?? fileURLToPath(new URL('../../../', import.meta.url))) },
 bundle: true, platform: 'node', format: 'esm', write: false });
 const { BulkCipher } = await import(`data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text)
   .toString('base64')}`);

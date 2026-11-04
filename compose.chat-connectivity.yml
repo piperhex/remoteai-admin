@@ -6,8 +6,8 @@ services:
       CHAT_NATIVE_STUN: "${CHAT_NATIVE_STUN:?Set at least two independent STUN endpoints}"
   chat-rendezvous:
     build:
-      context: ../..
-      dockerfile: apps/admin-go/Dockerfile.chat-connectivity
+      context: ${REMOTEAI_SOURCE:?Set the path to a Remote AI parent checkout}
+      dockerfile: crates/chat-connectivity/Dockerfile
     image: codex-chat-connectivity:ed73d318
     restart: unless-stopped
     environment:

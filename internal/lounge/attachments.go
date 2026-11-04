@@ -8,10 +8,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/codex-switch/admin-go/internal/content"
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/piperhex/remoteai-admin/internal/content"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const maxAttachments = 3

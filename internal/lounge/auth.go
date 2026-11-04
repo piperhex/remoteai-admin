@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const ticketLifetime = 10 * time.Minute

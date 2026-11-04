@@ -8,9 +8,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/codex-switch/admin-go/internal/migrations"
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
+	"github.com/piperhex/remoteai-admin/internal/migrations"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

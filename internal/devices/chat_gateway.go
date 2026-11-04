@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/codex-switch/admin-go/internal/chattraffic"
-	"github.com/codex-switch/admin-go/internal/content"
-	"github.com/codex-switch/admin-go/internal/mediarelay"
-	"github.com/codex-switch/admin-go/internal/platform"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/piperhex/remoteai-admin/internal/chattraffic"
+	"github.com/piperhex/remoteai-admin/internal/content"
+	"github.com/piperhex/remoteai-admin/internal/mediarelay"
+	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 type chatConnection struct {
