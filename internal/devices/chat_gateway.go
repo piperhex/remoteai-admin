@@ -88,6 +88,10 @@ func newChatGateway(service *Service) (*ChatGateway, error) {
 }
 
 func (g *ChatGateway) serve(c *gin.Context) {
+	if c.Query("channel") == "file" {
+		g.serveFileRelay(c)
+		return
+	}
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		return
@@ -171,6 +175,7 @@ func (g *ChatGateway) receive(client *peer, state *chatConnection, message platf
 	client.serviceHost.Store(isServiceCredential(token))
 	client.binaryRelay.Store(message["binaryRelay"] == true)
 	client.binaryBulk.Store(message["fileBulkV1"] == true && client.binaryRelay.Load())
+	client.fileConnection.Store(message["fileConnectionV1"] == true && client.binaryBulk.Load())
 	// Serialize handshake snapshots with saved-policy broadcasts so stale reads cannot follow a new policy.
 	g.policyMu.Lock()
 	defer g.policyMu.Unlock()

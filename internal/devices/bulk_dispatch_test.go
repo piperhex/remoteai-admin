@@ -115,7 +115,7 @@ func TestBulkDispatchBurstPreservesWireOrderAndBudgets(t *testing.T) {
 	}
 }
 
-func TestBulkDispatchExhaustionClosesOnlyAffectedSession(t *testing.T) {
+func TestBulkDispatchExhaustionPreservesChatSession(t *testing.T) {
 	for _, limit := range []string{"connection", "frames", "account", "instance"} {
 		t.Run(limit, func(t *testing.T) {
 			source, _ := bulkBackpressurePeer(t)
@@ -164,6 +164,12 @@ func TestBulkDispatchExhaustionClosesOnlyAffectedSession(t *testing.T) {
 			}
 			if !channelClosed(delivery.sessionDone) || source.closed.Load() || target.closed.Load() {
 				t.Fatal("pressure did not isolate its session")
+			}
+			sessions.mu.Lock()
+			retained := sessions.hot.sessions[delivery.sessionID] != nil
+			sessions.mu.Unlock()
+			if !retained {
+				t.Fatal("file congestion removed the chat session")
 			}
 			waitBulkCondition(t, func() bool { return source.bulkBuffered.Load() == 0 })
 			for _, release := range releases {

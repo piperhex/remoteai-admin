@@ -12,6 +12,7 @@ import (
 )
 
 type hotSession struct {
+	files                    fileRelayEndpoints
 	bulkDone                 chan struct{}
 	id, token, owner, device string
 	traffic                  sessionTraffic
@@ -194,11 +195,11 @@ func (s *hotSessions) join(input hotJoin) error {
 	if s.desktopICE != nil {
 		common["desktopIceServers"] = s.desktopICE(session.owner, expires)
 	}
-	input.desktop.socket.send(withChatClientInfo(common, input.message["clientInfo"]), nil)
+	input.desktop.socket.send(session.fileRelayMessage(withChatClientInfo(common, input.message["clientInfo"]), 0), nil)
 	delete(common, "publicKey")
 	delete(common, "clientInfo")
 	common["type"] = "paired"
-	input.client.send(common, nil)
+	input.client.send(session.fileRelayMessage(common, 1), nil)
 	return nil
 }
 
@@ -259,8 +260,8 @@ func (s *hotSessions) notifyReady(session *hotSession, renewed bool) {
 	if s.desktopICE != nil {
 		message["desktopIceServers"] = s.desktopICE(session.owner, session.expires)
 	}
-	session.desktop.socket.send(message, nil)
-	session.mobile.socket.send(message, nil)
+	session.desktop.socket.send(session.fileRelayMessage(message, 0), nil)
+	session.mobile.socket.send(session.fileRelayMessage(message, 1), nil)
 }
 
 func (s *hotSessions) route(client *peer, message platform.JSON) (bool, error) {
@@ -340,6 +341,15 @@ func (s *hotSessions) prepareRelay(session *hotSession, target *peer, message pl
 	source := session.desktop.socket
 	if source == target && session.mobile != nil {
 		source = session.mobile.socket
+	}
+	if message["type"] == "bulk" {
+		side := 1
+		if source != session.desktop.socket {
+			side = 0
+		}
+		if file := session.files.sockets[side]; file != nil && !file.closed.Load() {
+			target = file
+		}
 	}
 	if s.deliver == nil {
 		onRelay := s.onRelay

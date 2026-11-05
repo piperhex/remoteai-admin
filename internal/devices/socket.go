@@ -39,6 +39,7 @@ type peer struct {
 	serviceHost    atomic.Bool
 	binaryRelay    atomic.Bool
 	binaryBulk     atomic.Bool
+	fileConnection atomic.Bool
 	bulkBuffered   atomic.Int64
 	bulkQueue      chan outputFrame
 	bulkQueueMu    sync.Mutex

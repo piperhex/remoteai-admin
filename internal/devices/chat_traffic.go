@@ -78,23 +78,35 @@ func (g *ChatGateway) deliverMeteredRelay(delivery relayDelivery, frame platform
 			delivery.source.close(4001, "Invalid download record")
 			return
 		}
-		output := outputFrame{bytes: data, sent: sent, guard: guard, sourceDone: delivery.source.done,
-			sessionDone: delivery.sessionDone}
-		if g.bulkMeter != nil {
-			output.lease = &bulkWriter{meter: g.bulkMeter, session: delivery.sessionID, scope: chattraffic.BulkLeaseScope{
-				Owner: delivery.owner, Device: delivery.device, Writer: delivery.target.writerID},
-				failure: func() {
-					message := platform.JSON{"type": "relay-quota", "sessionId": delivery.sessionID,
-						"blocked": true, "reason": "unavailable"}
-					delivery.source.send(message, nil)
-					delivery.target.send(message, nil)
-				}}
-		}
+		output := g.bulkOutput(delivery, data, meter)
 		delivery.source.dispatchBulk(bulkDispatchItem{frame: output, delivery: delivery,
 			fail: func() { g.sessions.stopBulkSession(delivery) }})
 		return
 	}
 	delivery.target.sendGuarded(frame, sent, guard)
+}
+
+func (g *ChatGateway) bulkOutput(delivery relayDelivery, data []byte, meter relayTrafficMeter) outputFrame {
+	output := outputFrame{bytes: data, guard: delivery.guard(meter), sourceDone: delivery.source.done,
+		sessionDone: delivery.sessionDone, sent: func(bytes int) {
+			g.traffic.record(bytes)
+			if delivery.fromDesktop {
+				delivery.traffic.upload.Add(int64(bytes))
+			} else {
+				delivery.traffic.download.Add(int64(bytes))
+			}
+		}}
+	if g.bulkMeter != nil {
+		output.lease = &bulkWriter{meter: g.bulkMeter, session: delivery.sessionID, scope: chattraffic.BulkLeaseScope{
+			Owner: delivery.owner, Device: delivery.device, Writer: delivery.target.writerID},
+			failure: func() {
+				message := platform.JSON{"type": "relay-quota", "sessionId": delivery.sessionID,
+					"blocked": true, "reason": "unavailable"}
+				delivery.source.send(message, nil)
+				delivery.target.send(message, nil)
+			}}
+	}
+	return output
 }
 
 func (g *ChatGateway) publishUsage(parent context.Context) error {
