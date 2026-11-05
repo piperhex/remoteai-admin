@@ -75,6 +75,12 @@ Cross-client `bulk-relay-smoke.mjs`, `port-stream-smoke.mjs` and opt-in browser/
 `REMOTEAI_SOURCE` pointing to an initialized parent checkout with its client test dependencies. Windows
 browser tests use bundled Playwright Chromium with the parent's password-probe protection flags.
 
+`bulk-relay-smoke.mjs` exercises dedicated file sockets with concurrent encrypted transfers, slow receivers,
+chat responsiveness, authenticated reconnect and exact byte accounting. Run it again with
+`BULK_SMOKE_LEGACY=1` to verify bounded legacy transfers, queue exhaustion and recovery. A legacy overflow
+cancels only the file stream: late records stay fenced until authenticated session recovery, while chat remains
+connected. Dedicated file sockets use TCP backpressure without increasing the shared queue limits.
+
 For fast local Docker iteration, `scripts/build-local.ps1` builds a Linux executable into `testdata/bin/`;
 `compose.local.yml` and `testdata/Dockerfile.local` use that executable instead of recompiling inside Docker.
 

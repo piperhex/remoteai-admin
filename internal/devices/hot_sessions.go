@@ -14,6 +14,7 @@ import (
 type hotSession struct {
 	files                    fileRelayEndpoints
 	bulkDone                 chan struct{}
+	legacyBulkStopped        bool
 	id, token, owner, device string
 	traffic                  sessionTraffic
 	desktop                  chatEndpoint
@@ -333,6 +334,11 @@ func (s *hotSessions) forward(session *hotSession, target *peer, message platfor
 }
 
 func (s *hotSessions) prepareRelay(session *hotSession, target *peer, message platform.JSON) (func(), error) {
+	// An overloaded legacy stream stays fenced until authenticated session recovery.
+	// Otherwise later records acquire a fresh generation and arrive with holes in the file.
+	if message["type"] == "bulk" && session.legacyBulkStopped {
+		return nil, nil
+	}
 	payload, valid := forwardPayload(message, target)
 	if !valid {
 		return nil, errors.New("invalid relay")

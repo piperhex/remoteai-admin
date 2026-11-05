@@ -5,6 +5,7 @@ import "github.com/piperhex/remoteai-admin/internal/platform"
 // Call under chatSessions.mu. A reconnect starts a new endpoint generation, so
 // frames authorized for an old pair can never reach the replacement connection.
 func (session *hotSession) cancelBulk() {
+	session.legacyBulkStopped = false
 	session.closeFileRelays()
 	if session.bulkDone != nil {
 		close(session.bulkDone)
@@ -22,6 +23,7 @@ func (s *chatSessions) stopBulkSession(delivery relayDelivery) {
 	}
 	// Fence file records without removing the chat session or its authenticated keys.
 	session.cancelBulk()
+	session.legacyBulkStopped = true
 	message := platform.JSON{"type": "file-relay-reset", "sessionId": session.id}
 	session.desktop.socket.send(session.fileRelayMessage(message, 0), nil)
 	if session.mobile != nil {
