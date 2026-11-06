@@ -23,6 +23,8 @@ type directPermission struct {
 	Fingerprint           string
 	Generation            int64
 	Fresh                 bool
+	// Trusted current policy from the server, never supplied by the client or persisted with the pair.
+	Moderator bool `gorm:"-"`
 }
 
 type directPolicyRepository interface {
@@ -101,7 +103,7 @@ func (p postgresDirectPolicy) AdmitWithContact(ctx context.Context, request dire
 			return nil
 		}
 		if stored.Initiator == request.Initiator {
-			if stored.Fingerprint != request.Fingerprint {
+			if stored.Fingerprint != request.Fingerprint && !request.Moderator {
 				return errAwaitingReply
 			}
 			return nil

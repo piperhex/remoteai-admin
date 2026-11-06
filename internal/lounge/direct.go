@@ -51,6 +51,11 @@ func (h *hub) admitDirect(ctx context.Context, sender string, input incoming) (d
 	if err != nil {
 		return directAdmission{}, err
 	}
+	value, err := h.userPolicy(sender)
+	if err != nil {
+		return directAdmission{}, err
+	}
+	permission.Moderator = value.Moderator
 	if store, ok := h.directPolicy.(interface {
 		AdmitMessage(context.Context, directPermission) (directAdmission, error)
 	}); ok {
