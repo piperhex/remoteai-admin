@@ -50,6 +50,8 @@ type incoming struct {
 	Direct         bool              `json:"direct"`
 	Receipts       bool              `json:"receipts"`
 	GroupAcks      bool              `json:"groupAcks"`
+	GroupReads     bool              `json:"groupReads"`
+	GroupReceipt   string            `json:"groupReceipt,omitempty"`
 	Status         string            `json:"status"`
 	Generation     int64             `json:"generation,omitempty"`
 }
@@ -65,17 +67,18 @@ type account struct {
 }
 
 type message struct {
-	Attachments []attachment `json:"attachments,omitempty"`
-	Type        string       `json:"type"`
-	ID          string       `json:"id"`
-	Sender      account      `json:"sender"`
-	Text        string       `json:"text"`
-	Images      []string     `json:"images"`
-	SentAt      string       `json:"sentAt"`
-	Reply       *replyQuote  `json:"reply,omitempty"`
-	Recipient   *account     `json:"recipient,omitempty"`
-	Receipts    bool         `json:"receipts,omitempty"`
-	Generation  int64        `json:"generation,omitempty"`
+	GroupReceipt string       `json:"groupReceipt,omitempty"`
+	Attachments  []attachment `json:"attachments,omitempty"`
+	Type         string       `json:"type"`
+	ID           string       `json:"id"`
+	Sender       account      `json:"sender"`
+	Text         string       `json:"text"`
+	Images       []string     `json:"images"`
+	SentAt       string       `json:"sentAt"`
+	Reply        *replyQuote  `json:"reply,omitempty"`
+	Recipient    *account     `json:"recipient,omitempty"`
+	Receipts     bool         `json:"receipts,omitempty"`
+	Generation   int64        `json:"generation,omitempty"`
 }
 
 var errInvalid = errors.New("invalid lounge frame")

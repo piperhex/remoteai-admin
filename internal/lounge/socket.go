@@ -57,7 +57,8 @@ func (h *hub) read(client *peer) {
 		if json.Unmarshal(data, &input) != nil {
 			return
 		}
-		if input.Type == "receipt" || input.Type == "receipt-confirm" {
+		if input.Type == "receipt" || input.Type == "receipt-confirm" ||
+			input.Type == "group-read" || input.Type == "group-read-confirm" {
 			receiptCount++
 		} else {
 			count++
@@ -93,6 +94,8 @@ func (h *hub) receive(client *peer, input incoming) bool {
 		return h.syncSavedContacts(client, input)
 	case "receipt", "receipt-confirm":
 		return h.forwardReceipt(client, input)
+	case "group-read", "group-read-confirm":
+		return h.forwardGroupReceipt(client, input)
 	case "message":
 		return h.receiveMessage(client, input)
 	default:
@@ -189,6 +192,7 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 	client.direct = input.Direct
 	client.receipts = input.Receipts
 	client.groupAcks = input.GroupAcks
+	client.groupReads = input.GroupReads
 	client.avatarCache = input.AvatarCache && h.profiles != nil
 	client.applyRelationships(privacy)
 	h.clients[client] = true
@@ -228,9 +232,10 @@ func (h *hub) sendReadyLocked(client *peer, value policy, privacy relationships,
 		MutedConversations   []string  `json:"mutedConversations"`
 		Attachments          bool      `json:"attachments"`
 		AvatarCache          bool      `json:"avatarCache"`
+		GroupReads           bool      `json:"groupReads"`
 	}{"ready", user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true,
 		h.profiles != nil, h.directPolicy != nil, h.accountLookup != nil, h.names != nil, h.savedContacts != nil,
-		h.directPolicy != nil, h.notifications != nil, muted, h.attachmentPolicy != nil, client.avatarCache})
+		h.directPolicy != nil, h.notifications != nil, muted, h.attachmentPolicy != nil, client.avatarCache, true})
 	if err != nil {
 		return false
 	}

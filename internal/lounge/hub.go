@@ -26,6 +26,7 @@ type peer struct {
 	direct         bool
 	receipts       bool
 	groupAcks      bool
+	groupReads     bool
 	avatarCache    bool
 	avatarVersions map[string]string // Guarded by hub.mu; bounded by profileWatch.
 	blocks         map[string]bool
@@ -134,22 +135,28 @@ func (h *hub) broadcast(sender *peer, input incoming) {
 	defer h.mu.Unlock()
 	profile := sender.user
 	sentAt := time.Now().UTC().Format(time.RFC3339Nano)
+	groupReceipt, err := h.issueGroupReceipt(sender, input.ID)
+	if err != nil {
+		return
+	}
 	// Confirm validation before fan-out, without sending uploaded images back over the sender's connection.
 	// Older clients still use their full message echo as confirmation.
 	if sender.groupAcks {
 		ack, err := json.Marshal(struct {
-			Type        string       `json:"type"`
-			ID          string       `json:"id"`
-			SentAt      string       `json:"sentAt"`
-			Attachments []attachment `json:"attachments,omitempty"`
-		}{"accepted", input.ID, sentAt, input.Attachments})
+			Type         string       `json:"type"`
+			ID           string       `json:"id"`
+			SentAt       string       `json:"sentAt"`
+			Attachments  []attachment `json:"attachments,omitempty"`
+			GroupReceipt string       `json:"groupReceipt,omitempty"`
+		}{"accepted", input.ID, sentAt, input.Attachments, groupReceipt})
 		if err != nil {
 			return
 		}
 		sender.enqueue(ack)
 	}
 	frames, err := encodeMessage(message{Type: "message", ID: input.ID, Sender: profile,
-		Text: input.Text, Images: input.Images, Attachments: input.Attachments, Reply: input.Reply, SentAt: sentAt})
+		Text: input.Text, Images: input.Images, Attachments: input.Attachments, Reply: input.Reply, SentAt: sentAt,
+		GroupReceipt: groupReceipt})
 	if err != nil {
 		return
 	}
