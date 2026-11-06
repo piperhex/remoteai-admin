@@ -180,6 +180,9 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 		return false
 	}
 	client.user, client.expires = user, expires
+	if version := validClientVersion(input.ClientVersion); version != "" {
+		client.user.ClientVersions = []string{version}
+	}
 	client.user.Moderator = value.Moderator
 	client.moderator = value.Moderator
 	client.direct = input.Direct
@@ -196,6 +199,7 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 	h.publishPresenceLocked(client)
 	h.refreshContactPresenceLocked(client)
 	h.publishContactPresenceLocked(user.ID)
+	h.publishClientVersionsLocked(user.ID)
 	client.conn.SetReadLimit(maxFrameBytes)
 	return true
 }

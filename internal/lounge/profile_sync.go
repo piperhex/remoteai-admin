@@ -68,6 +68,8 @@ func (h *hub) watchProfiles(client *peer, input incoming) bool {
 	defer h.mu.Unlock()
 	watchAvatarVersions(client, input)
 	client.profileWatch = watching
+	client.versionWatch = input.ClientVersions
+	h.sendClientVersionsLocked(client, ids)
 	sendProfiles(client, profiles)
 	if h.names != nil {
 		sendNames(client, names)

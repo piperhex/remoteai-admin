@@ -70,4 +70,5 @@ func (h *hub) expireContactPresence(client *peer, expires time.Time) {
 		return
 	}
 	h.publishContactPresenceLocked(client.user.ID)
+	h.publishClientVersionsLocked(client.user.ID)
 }

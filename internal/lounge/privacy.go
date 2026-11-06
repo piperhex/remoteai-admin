@@ -60,6 +60,9 @@ func (h *hub) block(client *peer, input incoming) {
 	for other := range h.clientsByUser[input.UserID] {
 		other.blockedBy[client.user.ID] = *input.Blocked
 		h.sendContactChangeLocked(other, client.user.ID, online)
+		if other.profileWatch[client.user.ID] {
+			h.sendClientVersionsLocked(other, []string{client.user.ID})
+		}
 	}
 	data, err := json.Marshal(map[string]string{"type": "updated", "id": input.ID})
 	if err == nil {

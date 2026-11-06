@@ -33,6 +33,7 @@ type peer struct {
 	watching       map[string]bool
 	presence       map[string]*bool
 	profileWatch   map[string]bool
+	versionWatch   bool        // Opt-in metadata subscription, guarded by hub.mu.
 	presenceExpiry *time.Timer // Guarded by hub.mu.
 }
 

@@ -23,6 +23,8 @@ const (
 )
 
 type incoming struct {
+	ClientVersion  string            `json:"clientVersion"`
+	ClientVersions bool              `json:"clientVersions"`
 	AvatarCache    bool              `json:"avatarCache"`
 	AvatarVersions map[string]string `json:"avatarVersions"`
 	Attachments    []attachment      `json:"attachments,omitempty"`
@@ -52,11 +54,12 @@ type incoming struct {
 }
 
 type account struct {
-	ID        string `json:"id"`
-	Account   string `json:"account"`
-	Avatar    string `json:"avatar,omitempty"`
-	Nickname  string `json:"nickname,omitempty"`
-	Moderator bool   `json:"moderator"`
+	ClientVersions []string `json:"clientVersions,omitempty"`
+	ID             string   `json:"id"`
+	Account        string   `json:"account"`
+	Avatar         string   `json:"avatar,omitempty"`
+	Nickname       string   `json:"nickname,omitempty"`
+	Moderator      bool     `json:"moderator"`
 }
 
 type message struct {

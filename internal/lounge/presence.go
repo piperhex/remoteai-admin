@@ -63,6 +63,7 @@ func (h *hub) remove(client *peer) {
 	h.unindexContactPeerLocked(client)
 	h.publishPresenceLocked(nil)
 	h.publishContactPresenceLocked(client.user.ID)
+	h.publishClientVersionsLocked(client.user.ID)
 }
 
 func (h *hub) registerPresence(group *gin.RouterGroup, deps *platform.Dependencies) {
