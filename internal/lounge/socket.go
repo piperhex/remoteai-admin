@@ -182,6 +182,7 @@ func (h *hub) authorize(client *peer, input incoming) bool {
 	client.user, client.expires = user, expires
 	if version := validClientVersion(input.ClientVersion); version != "" {
 		client.user.ClientVersions = []string{version}
+		client.user.Clients = []clientInfo{{Version: version, Platform: validClientPlatform(input.ClientPlatform)}}
 	}
 	client.user.Moderator = value.Moderator
 	client.moderator = value.Moderator
