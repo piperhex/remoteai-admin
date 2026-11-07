@@ -168,6 +168,7 @@ var policyFields = []policyField{
 	{"fileDownloadMaxMb", 1, 20, false},
 	{"fileDownloadWindowSize", 1, 5, true},
 	{"fileBulkEnabled", 0, 0, true},
+	{"conversationSyncRelayKbps", 1, 200, true},
 }
 var titleModelPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$`)
 
