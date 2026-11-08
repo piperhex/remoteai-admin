@@ -57,8 +57,9 @@ type incoming struct {
 }
 
 type account struct {
-	ClientVersions []string     `json:"clientVersions,omitempty"`
-	Clients        []clientInfo `json:"clients,omitempty"`
+	// Live connection metadata is never read from stored account rows.
+	ClientVersions []string     `json:"clientVersions,omitempty" gorm:"-"`
+	Clients        []clientInfo `json:"clients,omitempty" gorm:"-"`
 	ID             string       `json:"id"`
 	Account        string       `json:"account"`
 	Avatar         string       `json:"avatar,omitempty"`
