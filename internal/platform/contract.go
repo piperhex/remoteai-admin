@@ -55,6 +55,7 @@ func LoadContract() (*Contract, error) {
 		return nil, err
 	}
 	contract.extendProviderSyncContract()
+	contract.extendAccountAliasContract()
 	return &contract, nil
 }
 
