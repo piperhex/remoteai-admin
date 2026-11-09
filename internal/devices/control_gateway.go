@@ -16,6 +16,7 @@ import (
 type controlSession struct {
 	owner, device, kind string
 	expires             time.Time
+	accountAuthSync     bool
 }
 type pendingCommand struct {
 	owner, device string
@@ -203,7 +204,8 @@ func (g *ControlGateway) authenticateDevice(client *peer, message platform.JSON,
 		client.close(4008, "Interactive host is active")
 		return nil
 	}
-	g.sessions[client] = controlSession{owner: owner, device: id, kind: "device"}
+	g.sessions[client] = controlSession{owner: owner, device: id, kind: "device",
+		accountAuthSync: hasAccountAuthSync(message)}
 	g.sockets[owner+":"+id] = client
 	g.mu.Unlock()
 	if client.serviceHost.Load() {

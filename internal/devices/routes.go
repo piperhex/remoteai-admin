@@ -34,6 +34,7 @@ func Register(router *gin.Engine, deps *platform.Dependencies) (*Runtime, error)
 		return nil, err
 	}
 	runtime := &Runtime{control: gateway, chat: chat}
+	runtime.stopAccountAuthSync = gateway.startAccountAuthSync()
 	runtime.stopLounge, err = lounge.Register(router, deps)
 	if err != nil {
 		_ = runtime.Close()

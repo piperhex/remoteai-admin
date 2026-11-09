@@ -54,6 +54,7 @@ type Dependencies struct {
 	ReadBandwidth              func() bandwidth.Snapshot
 	ChatPolicyChanged          func()
 	RemoteCommandPolicyChanged func()
+	AccountAuthChanged         func(string, []string)
 }
 
 func User(c *gin.Context) *Principal {

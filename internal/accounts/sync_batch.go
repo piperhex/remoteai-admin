@@ -1,6 +1,8 @@
 package accounts
 
 import (
+	"reflect"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -38,37 +40,43 @@ func stringValues(values []string) []interface{} {
 	return result
 }
 
-func saveAccountBatch(tx *gorm.DB, owner string, incoming []object, bound map[string]systemAccount) (bool, error) {
+func saveAccountBatch(tx *gorm.DB, owner string, incoming []object,
+	bound map[string]systemAccount) (bool, []string, error) {
 	rows, err := loadSyncRows[account](tx, owner, "accountId", incoming)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	existing := map[string]*account{}
 	for i := range rows {
 		existing[rows[i].AccountID] = &rows[i]
 	}
 	changed := false
+	authChanged := []string{}
 	for _, in := range incoming {
 		_, official := bound[str(in["id"])]
 		merged, active, err := mergeSyncAccount(existing[str(in["id"])], owner, in, official)
 		if err != nil {
-			return false, err
+			return false, nil, err
 		}
 		if merged == nil {
 			continue
 		}
 		if active && merged.Active {
 			if err = deactivateSyncAccounts(tx, owner, existing); err != nil {
-				return false, err
+				return false, nil, err
 			}
 		}
 		if err = writeSyncRow(tx, merged, existing[merged.AccountID] != nil); err != nil {
-			return false, err
+			return false, nil, err
+		}
+		old := existing[merged.AccountID]
+		if old == nil || !reflect.DeepEqual(old.Auth, merged.Auth) {
+			authChanged = append(authChanged, merged.AccountID)
 		}
 		existing[merged.AccountID] = merged
 		changed = true
 	}
-	return changed, nil
+	return changed, authChanged, nil
 }
 
 func deactivateSyncAccounts(tx *gorm.DB, owner string, existing map[string]*account) error {

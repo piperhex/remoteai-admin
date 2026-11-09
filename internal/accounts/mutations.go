@@ -29,9 +29,10 @@ func (s *service) upsertAccounts(options writeOptions, incoming []object) (inter
 		}
 	}
 	changed := false
+	var authChanged []string
 	err = s.deps.DB.Transaction(func(tx *gorm.DB) error {
 		var e error
-		changed, e = saveAccountBatch(tx, options.Owner, incoming, byID)
+		changed, authChanged, e = saveAccountBatch(tx, options.Owner, incoming, byID)
 		return e
 	})
 	if err != nil {
@@ -41,6 +42,9 @@ func (s *service) upsertAccounts(options writeOptions, incoming []object) (inter
 		if err = s.invalidate(options.Owner, false); err != nil {
 			return nil, err
 		}
+	}
+	if len(authChanged) > 0 && s.deps.AccountAuthChanged != nil {
+		s.deps.AccountAuthChanged(options.Owner, authChanged)
 	}
 	return object{"count": len(incoming)}, s.updateSyncDevice(options, incoming)
 }
