@@ -211,6 +211,7 @@ func (s *service) details(owner, id string) (interface{}, error) {
 type writeOptions struct {
 	Owner, Device            string
 	Editable, RejectMetadata bool
+	RefreshCredentials       bool
 }
 
 func (s *service) updateDetails(options writeOptions, id string, patch object) (interface{}, error) {

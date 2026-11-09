@@ -130,9 +130,10 @@ func (s *service) registerProviders(r *gin.RouterGroup) {
 
 func requestOptions(c *gin.Context) writeOptions {
 	return writeOptions{
-		Owner:    platform.User(c).ID,
-		Device:   c.GetHeader("x-device-id"),
-		Editable: permission(c, metadataPermission),
+		Owner:              platform.User(c).ID,
+		Device:             c.GetHeader("x-device-id"),
+		Editable:           permission(c, metadataPermission),
+		RefreshCredentials: permission(c, "self.accounts.write"),
 	}
 }
 func objects(value interface{}) []object {

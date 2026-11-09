@@ -23,6 +23,9 @@ func (s *service) upsertAccounts(options writeOptions, incoming []object) (inter
 	}
 	for _, row := range incoming {
 		if system, ok := byID[str(row["id"])]; ok {
+			if err = s.refreshBoundCredentials(options, system, obj(row["auth"])); err != nil {
+				return nil, err
+			}
 			if err = s.updateBoundMetadata(options, system, row); err != nil {
 				return nil, err
 			}

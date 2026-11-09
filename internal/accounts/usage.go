@@ -86,6 +86,13 @@ func (s *service) codexRequest(row *storedAccount, options requestOptionsHTTP) (
 	if err != nil {
 		return nil, err
 	}
+	if row.System != nil {
+		if err = s.notifyBoundCredentials(*row.System); err != nil {
+			return nil, err
+		}
+	} else if s.deps.AccountAuthChanged != nil {
+		s.deps.AccountAuthChanged(row.Owner, []string{row.Personal.AccountID})
+	}
 	response, err = s.sendCodex(row, options)
 	if err != nil {
 		return nil, err
