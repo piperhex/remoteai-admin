@@ -92,6 +92,9 @@ var providerMarketPageSchema string
 //go:embed 029_provider_market_review.sql
 var providerMarketReviewSchema string
 
+//go:embed 030_browser_bookmarks.sql
+var browserBookmarksSchema string
+
 // InitializeEmpty never changes existing tables, constraints, indexes, or customer data.
 // Existing deployments continue to apply the versioned sql migrations.
 func InitializeEmpty(db *gorm.DB) error {
@@ -189,6 +192,9 @@ func InitializeEmpty(db *gorm.DB) error {
 		if err := tx.Exec(providerMarketPageSchema).Error; err != nil {
 			return err
 		}
-		return tx.Exec(providerMarketReviewSchema).Error
+		if err := tx.Exec(providerMarketReviewSchema).Error; err != nil {
+			return err
+		}
+		return tx.Exec(browserBookmarksSchema).Error
 	})
 }

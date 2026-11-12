@@ -110,6 +110,8 @@ func (h *hub) receiveAction(client *peer, input incoming) bool {
 	switch input.Type {
 	case "avatar":
 		h.saveAvatar(client, input)
+	case "bookmarks-read", "bookmarks-save":
+		h.exchangeBookmarks(client, input)
 	case "notification-setting":
 		h.saveNotificationSetting(client, input)
 	case "nickname":
@@ -233,9 +235,11 @@ func (h *hub) sendReadyLocked(client *peer, value policy, privacy relationships,
 		Attachments          bool      `json:"attachments"`
 		AvatarCache          bool      `json:"avatarCache"`
 		GroupReads           bool      `json:"groupReads"`
+		Bookmarks            bool      `json:"bookmarks"`
 	}{"ready", user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true,
 		h.profiles != nil, h.directPolicy != nil, h.accountLookup != nil, h.names != nil, h.savedContacts != nil,
-		h.directPolicy != nil, h.notifications != nil, muted, h.attachmentPolicy != nil, client.avatarCache, true})
+		h.directPolicy != nil, h.notifications != nil, muted, h.attachmentPolicy != nil, client.avatarCache, true,
+		h.bookmarks != nil})
 	if err != nil {
 		return false
 	}

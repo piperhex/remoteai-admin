@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
+	"github.com/piperhex/remoteai-admin/internal/browserbookmarks"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -23,37 +24,38 @@ const (
 )
 
 type incoming struct {
-	ClientVersion  string            `json:"clientVersion"`
-	ClientPlatform string            `json:"clientPlatform"`
-	ClientVersions bool              `json:"clientVersions"`
-	AvatarCache    bool              `json:"avatarCache"`
-	AvatarVersions map[string]string `json:"avatarVersions"`
-	Attachments    []attachment      `json:"attachments,omitempty"`
-	Conversation   *string           `json:"conversation"`
-	Muted          *bool             `json:"muted"`
-	Type           string            `json:"type"`
-	Ticket         string            `json:"ticket"`
-	ID             string            `json:"id"`
-	Text           string            `json:"text"`
-	Query          string            `json:"query"`
-	Cursor         string            `json:"cursor"`
-	Images         []string          `json:"images"`
-	Avatar         string            `json:"avatar"`
-	Nickname       string            `json:"nickname"`
-	Remark         string            `json:"remark"`
-	UserID         string            `json:"userId"`
-	Minutes        *int              `json:"minutes"`
-	Reply          *replyQuote       `json:"reply,omitempty"`
-	To             string            `json:"to,omitempty"`
-	Blocked        *bool             `json:"blocked"`
-	Watch          []string          `json:"watch"`
-	Direct         bool              `json:"direct"`
-	Receipts       bool              `json:"receipts"`
-	GroupAcks      bool              `json:"groupAcks"`
-	GroupReads     bool              `json:"groupReads"`
-	GroupReceipt   string            `json:"groupReceipt,omitempty"`
-	Status         string            `json:"status"`
-	Generation     int64             `json:"generation,omitempty"`
+	Bookmarks      *browserbookmarks.Document `json:"bookmarks,omitempty"`
+	ClientVersion  string                     `json:"clientVersion"`
+	ClientPlatform string                     `json:"clientPlatform"`
+	ClientVersions bool                       `json:"clientVersions"`
+	AvatarCache    bool                       `json:"avatarCache"`
+	AvatarVersions map[string]string          `json:"avatarVersions"`
+	Attachments    []attachment               `json:"attachments,omitempty"`
+	Conversation   *string                    `json:"conversation"`
+	Muted          *bool                      `json:"muted"`
+	Type           string                     `json:"type"`
+	Ticket         string                     `json:"ticket"`
+	ID             string                     `json:"id"`
+	Text           string                     `json:"text"`
+	Query          string                     `json:"query"`
+	Cursor         string                     `json:"cursor"`
+	Images         []string                   `json:"images"`
+	Avatar         string                     `json:"avatar"`
+	Nickname       string                     `json:"nickname"`
+	Remark         string                     `json:"remark"`
+	UserID         string                     `json:"userId"`
+	Minutes        *int                       `json:"minutes"`
+	Reply          *replyQuote                `json:"reply,omitempty"`
+	To             string                     `json:"to,omitempty"`
+	Blocked        *bool                      `json:"blocked"`
+	Watch          []string                   `json:"watch"`
+	Direct         bool                       `json:"direct"`
+	Receipts       bool                       `json:"receipts"`
+	GroupAcks      bool                       `json:"groupAcks"`
+	GroupReads     bool                       `json:"groupReads"`
+	GroupReceipt   string                     `json:"groupReceipt,omitempty"`
+	Status         string                     `json:"status"`
+	Generation     int64                      `json:"generation,omitempty"`
 }
 
 type account struct {

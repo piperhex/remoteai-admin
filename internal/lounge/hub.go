@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/piperhex/remoteai-admin/internal/browserbookmarks"
 )
 
 // A complete, bounded avatar subscription must fit even before its writer runs.
@@ -57,6 +58,7 @@ type hub struct {
 	accountLookup    accountLookupRepository
 	savedContacts    savedContactRepository
 	notifications    notificationRepository
+	bookmarks        browserbookmarks.Repository
 }
 
 func newHub(key []byte) *hub {
