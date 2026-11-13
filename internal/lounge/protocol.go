@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"github.com/piperhex/remoteai-admin/internal/browserbookmarks"
+	"github.com/piperhex/remoteai-admin/internal/browserdata"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -24,6 +25,7 @@ const (
 )
 
 type incoming struct {
+	BrowserData    *browserdata.Document      `json:"browserData,omitempty"`
 	Bookmarks      *browserbookmarks.Document `json:"bookmarks,omitempty"`
 	ClientVersion  string                     `json:"clientVersion"`
 	ClientPlatform string                     `json:"clientPlatform"`
