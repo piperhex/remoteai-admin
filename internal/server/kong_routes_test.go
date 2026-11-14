@@ -107,6 +107,7 @@ func TestKongRouteAuthenticationBoundaries(t *testing.T) {
 		"/remote-assistance", "/chat-push/status", "/admin/api/update-sharing", "/update-sharing/reports",
 		"/admin/api/provider-market/batch/delete", "/admin/api/provider-market/batch/review",
 		"/admin/api/update-sharing/daily", "/admin/api/update-sharing/failures",
+		"/admin/api/browser-extensions", "/admin/api/browser-extensions/example/archive",
 		"/admin/api/browser-home", "/admin/api/browser-home/archive"} {
 		_, route := matchKongRoute(services, path)
 		if !hasKongAccountJWT(route) {
@@ -119,7 +120,7 @@ func TestKongRouteAuthenticationBoundaries(t *testing.T) {
 		"/native-update-packages", "/native-update-packages/v2.2.1/RemoteAI-android-v2.2.1.apk",
 		"/native-update-packages/assets/652496019",
 		"/admin-assets/app.js", "/browser-home/current", "/browser-home/packages/example",
-		"/browser-home/site/example/index.html"} {
+		"/browser-home/site/example/index.html", "/browser-extensions", "/browser-extensions/example/archive"} {
 		service, route := matchKongRoute(services, path)
 		if service.URL != kongGoUpstream || stripsKongPath(route) || len(route.Plugins) != 0 {
 			t.Errorf("%s must reach Go unchanged without the account JWT plugin", path)

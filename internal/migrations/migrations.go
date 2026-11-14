@@ -101,6 +101,9 @@ var browserDataSchema string
 //go:embed 032_browser_home.sql
 var browserHomeSchema string
 
+//go:embed 033_browser_extensions.sql
+var browserExtensionsSchema string
+
 // InitializeEmpty never changes existing tables, constraints, indexes, or customer data.
 // Existing deployments continue to apply the versioned sql migrations.
 func InitializeEmpty(db *gorm.DB) error {
@@ -207,6 +210,9 @@ func InitializeEmpty(db *gorm.DB) error {
 		if err := tx.Exec(browserDataSchema).Error; err != nil {
 			return err
 		}
-		return tx.Exec(browserHomeSchema).Error
+		if err := tx.Exec(browserHomeSchema).Error; err != nil {
+			return err
+		}
+		return tx.Exec(browserExtensionsSchema).Error
 	})
 }

@@ -23,6 +23,7 @@ services:
           - /feedback
           - /announcements
           - /browser-home
+          - /browser-extensions
           - /notifications
           - /faqs
           - /currency-rates
