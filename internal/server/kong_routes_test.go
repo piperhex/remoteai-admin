@@ -106,7 +106,8 @@ func TestKongRouteAuthenticationBoundaries(t *testing.T) {
 		"/devices/00000000-0000-4000-8000-000000000000/screen-power",
 		"/remote-assistance", "/chat-push/status", "/admin/api/update-sharing", "/update-sharing/reports",
 		"/admin/api/provider-market/batch/delete", "/admin/api/provider-market/batch/review",
-		"/admin/api/update-sharing/daily", "/admin/api/update-sharing/failures"} {
+		"/admin/api/update-sharing/daily", "/admin/api/update-sharing/failures",
+		"/admin/api/browser-home", "/admin/api/browser-home/archive"} {
 		_, route := matchKongRoute(services, path)
 		if !hasKongAccountJWT(route) {
 			t.Errorf("%s must use the account JWT route with expiry verification", path)
@@ -117,7 +118,8 @@ func TestKongRouteAuthenticationBoundaries(t *testing.T) {
 		"/update-packages/assets/652496018", "/update-packages/v2.0.2/Remote.AI_2.0.2_windows-x64-setup.exe",
 		"/native-update-packages", "/native-update-packages/v2.2.1/RemoteAI-android-v2.2.1.apk",
 		"/native-update-packages/assets/652496019",
-		"/admin-assets/app.js"} {
+		"/admin-assets/app.js", "/browser-home/current", "/browser-home/packages/example",
+		"/browser-home/site/example/index.html"} {
 		service, route := matchKongRoute(services, path)
 		if service.URL != kongGoUpstream || stripsKongPath(route) || len(route.Plugins) != 0 {
 			t.Errorf("%s must reach Go unchanged without the account JWT plugin", path)

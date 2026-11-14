@@ -18,6 +18,7 @@ var apiPrefixes = []string{
 	"/official-usage",
 	"/admin/api",
 	"/announcements",
+	"/browser-home",
 	"/notifications",
 	"/faqs",
 	"/currency-rates",

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/piperhex/remoteai-admin/internal/accounts"
+	"github.com/piperhex/remoteai-admin/internal/browserhome"
 	"github.com/piperhex/remoteai-admin/internal/content"
 	"github.com/piperhex/remoteai-admin/internal/devices"
 	"github.com/piperhex/remoteai-admin/internal/identity"
@@ -36,6 +37,7 @@ func New(deps *platform.Dependencies) (*gin.Engine, *devices.Runtime, error) {
 	router.Use(contract.Middleware(deps))
 	registrations := []func(*gin.Engine, *platform.Dependencies) error{
 		identity.Register, accounts.Register, content.Register, sshprofiles.Register, providermarket.Register,
+		browserhome.Register,
 	}
 	for _, register := range registrations {
 		if err := register(router, deps); err != nil {
