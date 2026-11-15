@@ -3,6 +3,8 @@ WORKDIR /source
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts --no-audit --no-fund
 COPY internal/devices/remote_command_messages.go ./internal/devices/remote_command_messages.go
+COPY internal/browserhome/messages.go ./internal/browserhome/messages.go
+COPY internal/browserextensions/messages.go ./internal/browserextensions/messages.go
 RUN npm run check:i18n
 
 FROM node:22-alpine AS ui
