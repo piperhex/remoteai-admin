@@ -56,3 +56,21 @@ func TestAddModelAndZeroPrice(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestUltrafastModeMultiplier(t *testing.T) {
+	for _, test := range []struct {
+		value string
+		valid bool
+	}{
+		{"{}", true}, {`{"ultrafastModeMultiplier":null}`, true}, {`{"ultrafastModeMultiplier":2.5}`, true},
+		{`{"ultrafastModeMultiplier":0}`, false}, {`{"ultrafastModeMultiplier":101}`, false},
+	} {
+		doc := Defaults()
+		if err := json.Unmarshal([]byte(test.value), &doc.Models[0]); err != nil {
+			t.Fatal(err)
+		}
+		if (doc.Validate() == nil) != test.valid {
+			t.Errorf("unexpected validation for %s", test.value)
+		}
+	}
+}

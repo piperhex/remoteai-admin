@@ -20,7 +20,7 @@ const MaxLongContextThresholdTokens = 1_000_000_000
 //go:embed defaults.json
 var defaultsJSON []byte
 
-// Model contains USD prices per million tokens and the Fast mode cost multiplier.
+// Model contains USD prices per million tokens and optional speed-specific multipliers.
 type Model struct {
 	Model                      string   `json:"model"`
 	Aliases                    []string `json:"aliases,omitempty"`
@@ -30,6 +30,7 @@ type Model struct {
 	LongContextPricing         bool     `json:"longContextPricing"`
 	LongContextThresholdTokens *uint64  `json:"longContextThresholdTokens,omitempty"`
 	FastModeMultiplier         *float64 `json:"fastModeMultiplier"`
+	UltrafastModeMultiplier    *float64 `json:"ultrafastModeMultiplier,omitempty"`
 	SourceURL                  string   `json:"sourceUrl"`
 }
 
@@ -69,7 +70,11 @@ func validModel(model Model) bool {
 		validRate(model.Output, maxRate, false) &&
 		(model.LongContextThresholdTokens == nil || (*model.LongContextThresholdTokens > 0 &&
 			*model.LongContextThresholdTokens <= MaxLongContextThresholdTokens)) &&
-		(model.FastModeMultiplier == nil || validRate(model.FastModeMultiplier, maxMultiplier, true))
+		validMultiplier(model.FastModeMultiplier) && validMultiplier(model.UltrafastModeMultiplier)
+}
+
+func validMultiplier(value *float64) bool {
+	return value == nil || validRate(value, maxMultiplier, true)
 }
 
 // Validate rejects ambiguous model aliases and incomplete or unsafe price data.

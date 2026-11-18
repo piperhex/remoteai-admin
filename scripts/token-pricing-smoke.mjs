@@ -33,7 +33,8 @@ assert.equal((await request(base, "GET", endpoint)).status, 401);
 assert.equal((await request(base, "PATCH", endpoint, { token: restricted, body: initial.body })).status, 403);
 try {
   const added = { model: "fixture-new-model", aliases: ["fixture-new-alias"], input: 1.2, cachedInput: 0.12,
-    output: 6, fastModeMultiplier: 3.2, longContextPricing: true, longContextThresholdTokens: 128000, sourceUrl: "" };
+    output: 6, fastModeMultiplier: 3.2, ultrafastModeMultiplier: 4.5, longContextPricing: true,
+    longContextThresholdTokens: 128000, sourceUrl: "" };
   const document = { ...initial.body, models: [...initial.body.models, added] };
   assert.equal((await request(base, "PATCH", endpoint, { token, body: document })).status, 200);
   const published = await request(base, "GET", "/token-cost-presets");
@@ -41,6 +42,7 @@ try {
   assert.deepEqual(published.body.models.at(-1), added);
   assert.match(published.headers["cache-control"], /no-store/);
   for (const model of [{ ...added, input: -1 }, { ...added, fastModeMultiplier: 0 },
+    { ...added, ultrafastModeMultiplier: 101 },
     ...[0, -1, 1.5, 1000000001, "272000"].map((longContextThresholdTokens) => ({ ...added, longContextThresholdTokens })),
     { ...added, input: null }, { ...added, aliases: [initial.body.models[0].model] }]) {
     assert.equal((await request(base, "PATCH", endpoint, {
@@ -49,6 +51,13 @@ try {
   }
   const after = await request(base, "GET", "/token-cost-presets");
   assert.deepEqual(after.body, published.body);
+  const cleared = { ...added, ultrafastModeMultiplier: null };
+  assert.equal((await request(base, "PATCH", endpoint, {
+    token, body: { ...initial.body, models: [...initial.body.models, cleared] },
+  })).status, 200);
+  const readback = (await request(base, "GET", "/token-cost-presets")).body.models.at(-1);
+  assert.equal(readback.ultrafastModeMultiplier ?? null, null);
+  assert.equal(readback.fastModeMultiplier, added.fastModeMultiplier);
   console.log("PASS pricing API: public defaults, admin save/add, permissions, validation and persisted readback");
 } finally {
   assert.equal((await request(base, "PATCH", endpoint, { token, body: initial.body })).status, 200);
