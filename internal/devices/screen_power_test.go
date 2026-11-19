@@ -1,6 +1,8 @@
 package devices
 
 import (
+	"context"
+	"errors"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -27,7 +29,7 @@ func TestScreenPowerRejectsInvalidActionsBeforeForwarding(t *testing.T) {
 }
 
 func TestScreenPowerRequiresWindowsAndAdvertisedSupport(t *testing.T) {
-	if !supportedCapability(screenPowerCapability) {
+	if !supportedCapability(screenPowerCapability) || !supportedCapability(screenPowerStatusCapability) {
 		t.Fatal("screen power capability cannot be registered")
 	}
 	device := &Device{Platform: "Windows", Capabilities: []string{screenPowerCapability}}
@@ -41,6 +43,46 @@ func TestScreenPowerRequiresWindowsAndAdvertisedSupport(t *testing.T) {
 	device.Platform, device.Capabilities = "macOS", []string{screenPowerCapability}
 	if supportsScreenPower(device) {
 		t.Fatal("unsupported platform accepted screen power")
+	}
+}
+
+func TestScreenPowerStatusUsesOnlyTheInteractiveHostResponse(t *testing.T) {
+	g := newControlGateway(nil)
+	desktop, service, other := queuedPeer(), queuedPeer(), queuedPeer()
+	session := controlSession{owner: "owner", device: "computer", kind: "device"}
+	g.sessions[desktop], g.sessions[other] = session, session
+	target := commandTarget{owner: "owner", id: "computer", interactive: true, readOnly: true}
+	service.serviceHost.Store(true)
+	g.sockets["owner:computer"] = service
+	command := platform.JSON{"type": screenPowerStatusCapability}
+	if _, err := g.requestCommand(context.Background(), target, command); !errors.Is(err, errInteractiveHostRequired) {
+		t.Fatalf("unattended service accepted: %v", err)
+	}
+	g.sockets["owner:computer"] = desktop
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	result := make(chan commandReply, 1)
+	go func() {
+		data, err := g.requestCommand(ctx, target, command)
+		result <- commandReply{data: data, err: err}
+	}()
+	select {
+	case <-desktop.queue:
+	case <-ctx.Done():
+		t.Fatal("status request was not delivered")
+	}
+	response := platform.JSON{"type": "switch-result", "commandId": command["commandId"],
+		"success": true, "data": platform.JSON{"state": "on"}}
+	if err := g.receive(other, response, nil); err != nil {
+		t.Fatal(err)
+	}
+	response["data"] = platform.JSON{"state": "off"}
+	if err := g.receive(desktop, response, nil); err != nil {
+		t.Fatal(err)
+	}
+	reply := <-result
+	if reply.err != nil || reply.data["state"] != "off" {
+		t.Fatalf("unexpected display status: %+v", reply)
 	}
 }
 
@@ -66,7 +108,7 @@ func TestScreenPowerUsesOnlyOwnerDeviceChannelAndAwaitsAcknowledgement(t *testin
 	}
 	g.mu.Lock()
 	for _, pending := range g.pending {
-		pending.result <- nil
+		pending.result <- commandReply{}
 	}
 	g.mu.Unlock()
 	select {

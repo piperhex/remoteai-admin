@@ -72,6 +72,7 @@ func Register(router *gin.Engine, deps *platform.Dependencies) (*Runtime, error)
 	})
 	group.DELETE("/:deviceId", gateway.remove)
 	group.POST("/:deviceId/screen-power", gateway.screenPower)
+	group.GET("/:deviceId/screen-power", gateway.screenPowerStatus)
 	group.POST("/:deviceId/service-credential", gateway.createServiceCredential)
 	group.DELETE("/:deviceId/service-credential", gateway.revokeServiceCredential)
 	for _, spec := range deviceCommands {

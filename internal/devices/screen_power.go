@@ -1,13 +1,18 @@
 package devices
 
 import (
+	"context"
+	"errors"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/piperhex/remoteai-admin/internal/platform"
 )
 
 const screenPowerCapability = "screen-power"
+const screenPowerStatusCapability = "screen-power-status"
+const screenPowerStatusTimeout = 4 * time.Second
 
 type screenPowerRequest struct {
 	Action string `json:"action"`
@@ -27,27 +32,57 @@ func (g *ControlGateway) screenPower(c *gin.Context) {
 		platform.Fail(c, 400, "client.deviceScreen.failed")
 		return
 	}
-	owner, id := platform.User(c).ID, c.Param("deviceId")
-	device, err := g.service.owned(owner, id)
-	if err != nil {
+	target := commandTarget{owner: platform.User(c).ID, id: c.Param("deviceId"), interactive: true}
+	if err := g.checkScreenPowerTarget(target); err != nil {
 		platform.Respond(c, nil, err)
 		return
 	}
-	if !supportsScreenPower(device) {
-		platform.Fail(c, 409, "client.deviceScreen.updateRequired")
-		return
-	}
-	g.mu.Lock()
-	client := g.sockets[owner+":"+id]
-	interactive := client != nil && !client.closed.Load() && !client.serviceHost.Load()
-	g.mu.Unlock()
-	if !interactive {
-		platform.Fail(c, 409, "client.deviceScreen.openComputerApp")
-		return
-	}
-	if g.command(owner, id, platform.JSON{"type": screenPowerCapability, "action": input.Action}) != nil {
-		platform.Fail(c, 409, "client.deviceScreen.failed")
+	if _, err := g.requestCommand(c.Request.Context(), target,
+		platform.JSON{"type": screenPowerCapability, "action": input.Action}); err != nil {
+		screenPowerFailed(c, err)
 		return
 	}
 	c.Status(204)
+}
+
+func (g *ControlGateway) screenPowerStatus(c *gin.Context) {
+	c.Header("Cache-Control", "no-store")
+	target := commandTarget{owner: platform.User(c).ID, id: c.Param("deviceId"), interactive: true, readOnly: true}
+	if err := g.checkScreenPowerTarget(target); err != nil {
+		platform.Respond(c, nil, err)
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), screenPowerStatusTimeout)
+	defer cancel()
+	data, err := g.requestCommand(ctx, target, platform.JSON{"type": screenPowerStatusCapability})
+	if err != nil {
+		screenPowerFailed(c, err)
+		return
+	}
+	state, _ := data["state"].(string)
+	if !validScreenPowerAction(state) {
+		platform.Fail(c, 409, "client.deviceScreen.failed")
+		return
+	}
+	c.JSON(200, gin.H{"state": state})
+}
+
+func (g *ControlGateway) checkScreenPowerTarget(target commandTarget) error {
+	device, err := g.service.owned(target.owner, target.id)
+	if err != nil {
+		return err
+	}
+	if !supportsScreenPower(device) || (target.readOnly &&
+		checkCapability(device, commandSpec{capability: screenPowerStatusCapability}) != nil) {
+		return platform.NewError(409, "client.deviceScreen.updateRequired")
+	}
+	return nil
+}
+
+func screenPowerFailed(c *gin.Context, err error) {
+	if errors.Is(err, errInteractiveHostRequired) {
+		platform.Fail(c, 409, "client.deviceScreen.openComputerApp")
+		return
+	}
+	platform.Fail(c, 409, "client.deviceScreen.failed")
 }

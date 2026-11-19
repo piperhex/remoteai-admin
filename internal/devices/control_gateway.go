@@ -1,6 +1,7 @@
 package devices
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"regexp"
@@ -19,9 +20,22 @@ type controlSession struct {
 	accountAuthSync     bool
 }
 type pendingCommand struct {
-	owner, device string
-	result        chan error
+	peer     *peer
+	readOnly bool
+	result   chan commandReply
 }
+type commandReply struct {
+	data platform.JSON
+	err  error
+}
+type commandTarget struct {
+	owner, id   string
+	interactive bool
+	readOnly    bool
+}
+
+var errInteractiveHostRequired = errors.New("interactive desktop host required")
+
 type ControlGateway struct {
 	revokeDesktopService func(string, string)
 	service              *Service
@@ -136,7 +150,7 @@ func (g *ControlGateway) receive(client *peer, message platform.JSON, timer *tim
 	command, _ := message["commandId"].(string)
 	g.mu.Lock()
 	pending, exists := g.pending[command]
-	if !exists || pending.owner != session.owner || pending.device != session.device {
+	if !exists || pending.peer != client {
 		g.mu.Unlock()
 		return nil
 	}
@@ -150,7 +164,11 @@ func (g *ControlGateway) receive(client *peer, message platform.JSON, timer *tim
 		}
 		result = errors.New(detail)
 	}
-	pending.result <- result
+	data, _ := message["data"].(map[string]any)
+	pending.result <- commandReply{data: data, err: result}
+	if pending.readOnly {
+		return nil
+	}
 	return g.service.touch(session.owner, session.device)
 }
 
@@ -261,15 +279,27 @@ func (g *ControlGateway) broadcast(owner string, message platform.JSON) {
 }
 
 func (g *ControlGateway) command(owner, id string, command platform.JSON) error {
+	_, err := g.requestCommand(context.Background(), commandTarget{owner: owner, id: id}, command)
+	return err
+}
+
+func (g *ControlGateway) requestCommand(ctx context.Context, target commandTarget, command platform.JSON) (platform.JSON, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	commandID := uuid.NewString()
 	g.mu.Lock()
-	client := g.sockets[owner+":"+id]
+	client := g.sockets[target.owner+":"+target.id]
+	if target.interactive && (client == nil || client.closed.Load() || client.serviceHost.Load()) {
+		g.mu.Unlock()
+		return nil, errInteractiveHostRequired
+	}
 	if client == nil || client.closed.Load() {
 		g.mu.Unlock()
-		return errors.New("Device is offline")
+		return nil, errors.New("Device is offline")
 	}
-	result := make(chan error, 1)
-	g.pending[commandID] = pendingCommand{owner, id, result}
+	result := make(chan commandReply, 1)
+	g.pending[commandID] = pendingCommand{peer: client, readOnly: target.readOnly, result: result}
 	command["commandId"] = commandID
 	client.send(command, nil)
 	g.mu.Unlock()
@@ -277,10 +307,12 @@ func (g *ControlGateway) command(owner, id string, command platform.JSON) error 
 	defer timer.Stop()
 	defer func() { g.mu.Lock(); delete(g.pending, commandID); g.mu.Unlock() }()
 	select {
-	case err := <-result:
-		return err
+	case reply := <-result:
+		return reply.data, reply.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	case <-timer.C:
-		return errors.New("Timed out while waiting for the device command")
+		return nil, errors.New("Timed out while waiting for the device command")
 	}
 }
 
@@ -312,11 +344,11 @@ func (g *ControlGateway) disconnect(client *peer) {
 		delete(g.sockets, session.owner+":"+session.device)
 	}
 	for id, pending := range g.pending {
-		if pending.owner != session.owner || pending.device != session.device {
+		if pending.peer != client {
 			continue
 		}
 		delete(g.pending, id)
-		pending.result <- errors.New("Device disconnected before the command completed")
+		pending.result <- commandReply{err: errors.New("Device disconnected before the command completed")}
 	}
 	g.mu.Unlock()
 	if !wasCurrent {
