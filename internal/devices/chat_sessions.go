@@ -10,11 +10,12 @@ import (
 )
 
 type desktopInfo struct {
-	expires    time.Time
-	version    float64
-	tcp        bool
-	native     bool
-	assistance bool
+	expires          time.Time
+	version          float64
+	tcp              bool
+	native           bool
+	assistance       bool
+	assistanceEvents bool
 }
 type chatSessions struct {
 	lounge      map[*peer]loungePeer
@@ -69,14 +70,20 @@ func (s *chatSessions) join(client *peer, identity chatIdentity, message platfor
 		if err := s.hot.register(client, identity, descriptors); err != nil {
 			return err
 		}
-		s.info[client] = desktopInfo{identity.expires, version,
-			message["tcpPunch"] == true, message["nativeTraversal"] == true, message["remoteAssistance"] == true}
+		events := !client.serviceHost.Load() && message["assistanceEvents"] == true
+		s.info[client] = desktopInfo{expires: identity.expires, version: version,
+			tcp: message["tcpPunch"] == true, native: message["nativeTraversal"] == true,
+			assistance: message["remoteAssistance"] == true, assistanceEvents: events}
 		if previous := s.desktops[key]; previous != nil && previous != client {
 			s.disconnectLocked(previous, false)
 			previous.close(4000, "Replaced by a newer connection")
 		}
 		s.desktops[key] = client
-		client.send(platform.JSON{"type": "registered"}, nil)
+		registered := platform.JSON{"type": "registered"}
+		if events {
+			registered["assistanceEvents"] = true
+		}
+		client.send(registered, nil)
 		return nil
 	}
 	return s.joinMobile(client, identity, message, ice)

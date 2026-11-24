@@ -85,6 +85,7 @@ func (s *chatSessions) createAssistance(input assistanceRequest) (assistanceRequ
 	input.ID, input.State, input.CreatedAt = uuid.NewString(), assistancePending, time.Now()
 	input.ExpiresAt = input.CreatedAt.Add(assistancePendingLifetime)
 	s.assistance[input.ID] = &input
+	s.notifyAssistance(input)
 	return input, nil
 }
 
@@ -146,6 +147,8 @@ func (s *chatSessions) updateAssistance(actor assistanceActor, action string) (a
 			return *r, platform.NewError(409, "请先结束当前协助或取消邀请。")
 		}
 	}
+	// Every helper desktop that saw the pending invitation must remove it on acceptance.
+	s.notifyAssistance(*r)
 	r.State, r.HelperDeviceID = assistanceAccepted, actor.device
 	r.ExpiresAt = time.Now().Add(assistanceActiveLifetime)
 	return *r, nil
@@ -169,12 +172,25 @@ func (s *chatSessions) listAssistance(owner, device string) []assistanceRequest 
 
 func (s *chatSessions) finishAssistance(request *assistanceRequest, state assistanceState) {
 	request.State, request.FinishedAt = state, time.Now()
+	s.notifyAssistance(*request)
 	for _, session := range s.hot.sessions {
 		if session.assistanceID == request.ID {
 			s.hot.remove(session)
 			if session.mobile != nil {
 				session.mobile.socket.close(4001, "Assistance ended")
 			}
+		}
+	}
+}
+
+// Called under the session lock. Peers queue only a hint; the authenticated list remains authoritative.
+func (s *chatSessions) notifyAssistance(request assistanceRequest) {
+	now := time.Now()
+	for key, client := range s.desktops {
+		owner, device, ok := strings.Cut(key, ":")
+		info := s.info[client]
+		if ok && info.assistanceEvents && info.expires.After(now) && request.visible(owner, device) {
+			client.send(platform.JSON{"type": "assistance-changed"}, nil)
 		}
 	}
 }
