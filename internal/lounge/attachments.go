@@ -2,6 +2,8 @@ package lounge
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"errors"
 	"strings"
 	"time"
@@ -15,6 +17,17 @@ import (
 )
 
 const maxAttachments = 3
+const attachmentKeyID = "lounge-attachment-v1"
+
+func (h *hub) attachmentKey() []byte {
+	key := h.directKey
+	if len(key) == 0 {
+		key = h.key // Standalone protocol fixtures.
+	}
+	mac := hmac.New(sha256.New, key)
+	mac.Write([]byte(attachmentKeyID))
+	return mac.Sum(nil)
+}
 
 type attachment struct {
 	ID     string `json:"id"`
@@ -57,7 +70,15 @@ func (h *hub) verifyAttachment(token, viewer string) (string, string, string, er
 	if len(token) > 8192 {
 		return "", "", "", errInvalid
 	}
-	_, err := jwt.ParseWithClaims(token, &value, func(*jwt.Token) (interface{}, error) { return h.key, nil },
+	_, err := jwt.ParseWithClaims(token, &value, func(t *jwt.Token) (interface{}, error) {
+		if _, versioned := t.Header["kid"]; !versioned {
+			return h.key, nil
+		}
+		if t.Header["kid"] != attachmentKeyID {
+			return nil, errInvalid
+		}
+		return h.attachmentKey(), nil
+	},
 		jwt.WithValidMethods([]string{"HS256"}), jwt.WithAudience("lounge-attachment"))
 	if err != nil || value.Subject == "" || value.Device == "" ||
 		(value.Recipient != "" && viewer != value.Recipient && viewer != value.Subject) {
@@ -140,11 +161,12 @@ func (h *hub) prepareAttachments(sender *peer, input *incoming) error {
 			return errors.New("client.lounge.attachmentLimit")
 		}
 		file.Grant = ""
-		token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, attachmentClaims{
+		claims := attachmentClaims{
 			Device: file.Device, Recipient: input.To, File: file, Generation: input.Generation,
 			RegisteredClaims: jwt.RegisteredClaims{Subject: sender.user.ID, Audience: []string{"lounge-attachment"},
 				ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour))},
-		}).SignedString(h.key)
+		}
+		token, err := h.signAttachment(claims)
 		if err != nil {
 			return err
 		}
@@ -160,6 +182,12 @@ func (h *hub) prepareAttachments(sender *peer, input *incoming) error {
 		}
 	}
 	return nil
+}
+
+func (h *hub) signAttachment(claims attachmentClaims) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token.Header["kid"] = attachmentKeyID
+	return token.SignedString(h.attachmentKey())
 }
 
 func validAttachment(file attachment, to string) bool {

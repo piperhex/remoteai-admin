@@ -57,7 +57,7 @@ func (h *hub) read(client *peer) {
 		if json.Unmarshal(data, &input) != nil {
 			return
 		}
-		if input.Type == "receipt" || input.Type == "receipt-confirm" ||
+		if input.Type == "receipt" || input.Type == "receipt-confirm" || input.Type == "image-pending" ||
 			input.Type == "group-read" || input.Type == "group-read-confirm" {
 			receiptCount++
 		} else {
@@ -94,6 +94,9 @@ func (h *hub) receive(client *peer, input incoming) bool {
 		return h.syncSavedContacts(client, input)
 	case "receipt", "receipt-confirm":
 		return h.forwardReceipt(client, input)
+	case "image-pending":
+		input.Status = "delivered"
+		return h.forwardReceipt(client, input)
 	case "group-read", "group-read-confirm":
 		return h.forwardGroupReceipt(client, input)
 	case "message":
@@ -108,6 +111,8 @@ func (h *hub) receiveAction(client *peer, input incoming) bool {
 		return false
 	}
 	switch input.Type {
+	case "image-grant-request", "image-grant-approve":
+		h.renewImageGrant(client, input)
 	case "avatar":
 		h.saveAvatar(client, input)
 	case "bookmarks-read", "bookmarks-save":
@@ -235,13 +240,14 @@ func (h *hub) sendReadyLocked(client *peer, value policy, privacy relationships,
 		NotificationSettings bool      `json:"notificationSettings"`
 		MutedConversations   []string  `json:"mutedConversations"`
 		Attachments          bool      `json:"attachments"`
+		ImageReceipts        bool      `json:"imageReceipts"`
 		AvatarCache          bool      `json:"avatarCache"`
 		GroupReads           bool      `json:"groupReads"`
 		Bookmarks            bool      `json:"bookmarks"`
 		BrowserData          bool      `json:"browserData"`
 	}{"ready", user, value, h.onlineForLocked(value.Moderator), true, privacy.Blocked, true,
 		h.profiles != nil, h.directPolicy != nil, h.accountLookup != nil, h.names != nil, h.savedContacts != nil,
-		h.directPolicy != nil, h.notifications != nil, muted, h.attachmentPolicy != nil, client.avatarCache, true,
+		h.directPolicy != nil, h.notifications != nil, muted, h.attachmentPolicy != nil, true, client.avatarCache, true,
 		h.bookmarks != nil, h.browserData != nil})
 	if err != nil {
 		return false

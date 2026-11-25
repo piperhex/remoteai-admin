@@ -160,6 +160,7 @@ func (h *hub) broadcast(sender *peer, input incoming) {
 	}
 	frames, err := encodeMessage(message{Type: "message", ID: input.ID, Sender: profile,
 		Text: input.Text, Images: input.Images, Attachments: input.Attachments, Reply: input.Reply, SentAt: sentAt,
+		GroupRetry:   input.GroupRetry,
 		GroupReceipt: groupReceipt})
 	if err != nil {
 		return

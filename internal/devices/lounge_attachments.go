@@ -17,7 +17,7 @@ func (g *ChatGateway) connectAttachment(client *peer, identity chatIdentity, fra
 	}
 	owner, device, fileID, err := g.service.deps.LoungeAttachment(grant, identity.owner)
 	if err != nil {
-		client.send(platform.JSON{"type": "attachment-unavailable", "id": request}, nil)
+		client.send(platform.JSON{"type": "attachment-unavailable", "id": request, "reason": "grant"}, nil)
 		return nil
 	}
 	return g.sessions.pairAttachment(client, platform.JSON{"id": request, "owner": owner, "device": device, "fileId": fileID}, g.ice)

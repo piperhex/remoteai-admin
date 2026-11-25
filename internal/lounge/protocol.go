@@ -25,6 +25,10 @@ const (
 )
 
 type incoming struct {
+	MessageID      string                     `json:"messageId"`
+	FileID         string                     `json:"fileId"`
+	Proof          string                     `json:"proof"`
+	GroupRetry     bool                       `json:"groupRetry"`
 	BrowserData    *browserdata.Document      `json:"browserData,omitempty"`
 	Bookmarks      *browserbookmarks.Document `json:"bookmarks,omitempty"`
 	ClientVersion  string                     `json:"clientVersion"`
@@ -72,6 +76,7 @@ type account struct {
 }
 
 type message struct {
+	GroupRetry   bool         `json:"groupRetry,omitempty"`
 	GroupReceipt string       `json:"groupReceipt,omitempty"`
 	Attachments  []attachment `json:"attachments,omitempty"`
 	Type         string       `json:"type"`
