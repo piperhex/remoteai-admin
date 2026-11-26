@@ -206,7 +206,7 @@ func (s *chatSessions) routeLegacy(client *peer, message platform.JSON) error {
 		}
 	case "peer-close":
 		delete(s.sessions, id)
-		target.send(platform.JSON{"type": "peer-close", "sessionId": id}, nil)
+		target.send(peerCloseFrame(id, client == session.desktop, message["reason"]), nil)
 	default:
 		return errors.New("invalid chat frame")
 	}

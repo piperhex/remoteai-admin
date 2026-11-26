@@ -51,6 +51,15 @@ func publicKey(value interface{}) (string, error) {
 	return text, nil
 }
 
+// Only the paired host may report that its identity is waiting for local setup.
+func peerCloseFrame(id string, fromDesktop bool, reason interface{}) platform.JSON {
+	frame := platform.JSON{"type": "peer-close", "sessionId": id}
+	if fromDesktop && reason == "host-keyring" {
+		frame["reason"] = "host-keyring"
+	}
+	return frame
+}
+
 func chatSignal(value interface{}) (platform.JSON, error) {
 	message, ok := value.(map[string]interface{})
 	if !ok || message == nil {

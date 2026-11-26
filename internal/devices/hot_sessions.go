@@ -316,7 +316,7 @@ func (s *hotSessions) prepareRoute(client *peer, message platform.JSON) (bool, f
 func (s *hotSessions) forward(session *hotSession, target *peer, message platform.JSON) error {
 	switch message["type"] {
 	case "peer-close":
-		s.remove(session)
+		s.removeWithNotice(session, peerCloseFrame(session.id, target != session.desktop.socket, message["reason"]))
 		return nil
 	case "signal":
 		payload, err := chatSignal(message["payload"])
@@ -409,6 +409,10 @@ func (s *hotSessions) prune() {
 }
 
 func (s *hotSessions) remove(session *hotSession) {
+	s.removeWithNotice(session, peerCloseFrame(session.id, false, nil))
+}
+
+func (s *hotSessions) removeWithNotice(session *hotSession, notice platform.JSON) {
 	session.cancelBulk()
 	delete(s.sessions, session.id)
 	sockets := []*peer{session.desktop.socket}
@@ -422,6 +426,6 @@ func (s *hotSessions) remove(session *hotSession) {
 		s.closedOrder = s.closedOrder[1:]
 	}
 	for _, socket := range sockets {
-		socket.send(platform.JSON{"type": "peer-close", "sessionId": session.id}, nil)
+		socket.send(notice, nil)
 	}
 }
