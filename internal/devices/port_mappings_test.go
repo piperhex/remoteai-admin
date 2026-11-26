@@ -21,6 +21,9 @@ func TestPortMappingValidation(t *testing.T) {
 		func(v *portMapping) { v.RemotePort = 0 },
 		func(v *portMapping) { v.LocalPort = 65536 },
 		func(v *portMapping) { v.Protocol = "icmp" },
+		func(v *portMapping) { v.LocalDomain = "http://app.localhost:8080" },
+		func(v *portMapping) { v.LocalDomain = "127.0.0.1" },
+		func(v *portMapping) { v.LocalDomain = "host..test" },
 		func(v *portMapping) { v.ID = "../mapping" },
 		func(v *portMapping) { v.UpdatedAt = time.Now().Add(time.Hour).UnixMilli() },
 	} {
@@ -35,6 +38,29 @@ func TestPortMappingValidation(t *testing.T) {
 	}
 	if validatePortMappings(mappingDocument{Mappings: nil}) == nil {
 		t.Fatal("null mappings")
+	}
+}
+
+func TestPortMappingDomainPersistsThroughLegacyClientWrites(t *testing.T) {
+	entry := portMapping{ID: "mapping", RemoteHost: "127.0.0.1", RemotePort: 3000,
+		LocalPort: 13000, LocalDomain: "app.localhost"}
+	saved := mappingDocument{Revision: 1, Mappings: []portMapping{entry}}
+	legacy := portMappingResponse(saved, false)
+	if legacy.SupportsLocalDomain || legacy.Mappings[0].LocalDomain != "" || saved.Mappings[0].LocalDomain != "app.localhost" {
+		t.Fatal("legacy response must omit the domain without modifying the stored configuration")
+	}
+	legacy.Mappings[0].RemotePort = 8080
+	merged := mergeMappingWrite(saved.Mappings, legacy)
+	if merged[0].LocalDomain != "app.localhost" || merged[0].RemotePort != 8080 {
+		t.Fatal("a legacy write lost the configured domain")
+	}
+	latest := portMappingResponse(mappingDocument{Mappings: merged}, true)
+	if !latest.SupportsLocalDomain || latest.Mappings[0].LocalDomain != "app.localhost" {
+		t.Fatal("new clients must see the configured domain")
+	}
+	latest.Mappings[0].LocalDomain = ""
+	if cleared := mergeMappingWrite(saved.Mappings, latest); cleared[0].LocalDomain != "" {
+		t.Fatal("new clients must be able to clear the domain")
 	}
 }
 

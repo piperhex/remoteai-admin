@@ -54,6 +54,7 @@ func TestPortMappingSyncDatabaseAndOwnership(t *testing.T) {
 	principal := owner
 	router.Use(func(c *gin.Context) { c.Set("principal", &platform.Principal{ID: principal}) })
 	s.registerPortMappings(router.Group("/devices"))
+	query := ""
 	request := func(method, id string, doc *mappingDocument) (int, mappingDocument) {
 		var body bytes.Buffer
 		if doc != nil {
@@ -62,7 +63,7 @@ func TestPortMappingSyncDatabaseAndOwnership(t *testing.T) {
 			}
 		}
 		recorder := httptest.NewRecorder()
-		req := httptest.NewRequest(method, "/devices/"+id+"/port-mappings", &body)
+		req := httptest.NewRequest(method, "/devices/"+id+"/port-mappings"+query, &body)
 		req.Header.Set("Content-Type", "application/json")
 		router.ServeHTTP(recorder, req)
 		var result mappingDocument
@@ -77,14 +78,32 @@ func TestPortMappingSyncDatabaseAndOwnership(t *testing.T) {
 	if code != 200 || initial.Revision != 0 || len(initial.Mappings) != 0 {
 		t.Fatal("initial document")
 	}
-	initial.Mappings = []portMapping{{ID: "mapping-1", RemoteHost: "127.0.0.1", RemotePort: 3000, LocalPort: 13000}}
+	query = "?localDomain=1"
+	initial.Mappings = []portMapping{{ID: "mapping-1", RemoteHost: "127.0.0.1", RemotePort: 3000,
+		LocalPort: 13000, LocalDomain: "app.localhost"}}
 	code, saved := request("PUT", device, &initial)
-	if code != 200 || !saved.Accepted || saved.Revision != 1 {
+	if code != 200 || !saved.Accepted || saved.Revision != 1 || !saved.SupportsLocalDomain ||
+		saved.Mappings[0].LocalDomain != "app.localhost" {
 		t.Fatal("save failed")
 	}
 	_, stale := request("PUT", device, &initial)
 	if stale.Accepted || stale.Revision != 1 {
 		t.Fatal("stale write accepted")
+	}
+	query = ""
+	_, legacy := request("GET", device, nil)
+	if legacy.SupportsLocalDomain || legacy.Mappings[0].LocalDomain != "" {
+		t.Fatal("legacy response exposed an unsupported field")
+	}
+	legacy.Mappings[0].LocalPort = 14000
+	_, legacySaved := request("PUT", device, &legacy)
+	if !legacySaved.Accepted || legacySaved.Mappings[0].LocalDomain != "" {
+		t.Fatal("legacy save failed")
+	}
+	query = "?localDomain=1"
+	_, saved = request("GET", device, nil)
+	if saved.Mappings[0].LocalDomain != "app.localhost" || saved.Mappings[0].LocalPort != 14000 {
+		t.Fatal("a legacy edit lost either the domain or the port change")
 	}
 	saved.Mappings = []portMapping{}
 	_, deleted := request("PUT", device, &saved)

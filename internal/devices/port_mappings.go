@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 	"regexp"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -14,25 +16,28 @@ import (
 )
 
 type portMapping struct {
-	ID         string `json:"id"`
-	RemoteHost string `json:"remoteHost"`
-	RemotePort int    `json:"remotePort"`
-	LocalPort  int    `json:"localPort"`
-	Protocol   string `json:"protocol,omitempty"`
-	UpdatedAt  int64  `json:"updatedAt,omitempty"`
+	ID          string `json:"id"`
+	RemoteHost  string `json:"remoteHost"`
+	RemotePort  int    `json:"remotePort"`
+	LocalPort   int    `json:"localPort"`
+	Protocol    string `json:"protocol,omitempty"`
+	UpdatedAt   int64  `json:"updatedAt,omitempty"`
+	LocalDomain string `json:"localDomain,omitempty"`
 }
 
 type mappingDocument struct {
-	OwnerID  string        `gorm:"column:ownerId;primaryKey" json:"-"`
-	DeviceID string        `gorm:"column:deviceId;primaryKey" json:"-"`
-	Revision int64         `json:"revision"`
-	Mappings []portMapping `gorm:"serializer:json" json:"mappings"`
-	Accepted bool          `gorm:"-" json:"accepted"`
+	OwnerID             string        `gorm:"column:ownerId;primaryKey" json:"-"`
+	DeviceID            string        `gorm:"column:deviceId;primaryKey" json:"-"`
+	Revision            int64         `json:"revision"`
+	Mappings            []portMapping `gorm:"serializer:json" json:"mappings"`
+	Accepted            bool          `gorm:"-" json:"accepted"`
+	SupportsLocalDomain bool          `gorm:"-" json:"supportsLocalDomain,omitempty"`
 }
 
 func (mappingDocument) TableName() string { return "device_port_mappings" }
 
 var mappingID = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
+var mappingDomainLabel = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
 
 func (s *Service) registerPortMappings(group *gin.RouterGroup) {
 	group.GET("/:deviceId/port-mappings", s.portMappings)
@@ -47,6 +52,7 @@ func (s *Service) portMappings(c *gin.Context) {
 		return
 	}
 	var incoming *mappingDocument
+	supportsDomain := c.Query("localDomain") == "1"
 	if c.Request.Method == http.MethodPut {
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 16*1024)
 		incoming = &mappingDocument{}
@@ -54,9 +60,36 @@ func (s *Service) portMappings(c *gin.Context) {
 			platform.Fail(c, 400, "Invalid port mapping configuration")
 			return
 		}
+		incoming.SupportsLocalDomain = supportsDomain
 	}
 	result, err := s.syncPortMappings(c.Request.Context(), owner, device, incoming)
-	platform.Respond(c, result, err)
+	platform.Respond(c, portMappingResponse(result, supportsDomain), err)
+}
+
+func portMappingResponse(result mappingDocument, supportsDomain bool) mappingDocument {
+	result.SupportsLocalDomain = supportsDomain
+	if !supportsDomain {
+		result.Mappings = slices.Clone(result.Mappings)
+		for i := range result.Mappings {
+			result.Mappings[i].LocalDomain = ""
+		}
+	}
+	return result
+}
+
+func validMappingDomain(domain string) bool {
+	if domain == "" || domain == "localhost" {
+		return true
+	}
+	labels := strings.Split(domain, ".")
+	if len(domain) > 253 || len(labels) < 2 {
+		return false
+	}
+	last := labels[len(labels)-1]
+	if len(last) == 0 || last[0] < 'a' || last[0] > 'z' {
+		return false
+	}
+	return !slices.ContainsFunc(labels, func(label string) bool { return !mappingDomainLabel.MatchString(label) })
 }
 
 func validatePortMappings(doc mappingDocument) error {
@@ -71,6 +104,7 @@ func validatePortMappings(doc mappingDocument) error {
 		}
 		ip := net.ParseIP(entry.RemoteHost)
 		if !mappingID.MatchString(entry.ID) || seen[entry.ID] || ip == nil || ip.IsUnspecified() ||
+			!validMappingDomain(entry.LocalDomain) ||
 			entry.RemotePort < 1 || entry.RemotePort > 65535 || entry.LocalPort < 1 || entry.LocalPort > 65535 ||
 			entry.UpdatedAt < 0 || entry.UpdatedAt > time.Now().Add(5*time.Minute).UnixMilli() {
 			return invalid
@@ -105,7 +139,7 @@ func (s *Service) syncPortMappings(ctx context.Context, owner, device string,
 		if err != nil || incoming.Revision != result.Revision {
 			return err
 		}
-		result.Mappings = incoming.Mappings
+		result.Mappings = mergeMappingWrite(result.Mappings, *incoming)
 		result.Revision++
 		result.Accepted = true
 		return tx.Save(&result).Error
@@ -114,4 +148,20 @@ func (s *Service) syncPortMappings(ctx context.Context, owner, device string,
 		platform.InvalidatePortMappings(s.deps, owner, device)
 	}
 	return result, err
+}
+
+func mergeMappingWrite(saved []portMapping, incoming mappingDocument) []portMapping {
+	if incoming.SupportsLocalDomain {
+		return incoming.Mappings
+	}
+	// Older clients omit the domain when they upload a complete replacement document.
+	domains := make(map[string]string, len(saved))
+	for _, entry := range saved {
+		domains[entry.ID] = entry.LocalDomain
+	}
+	mappings := slices.Clone(incoming.Mappings)
+	for i := range mappings {
+		mappings[i].LocalDomain = domains[mappings[i].ID]
+	}
+	return mappings
 }
