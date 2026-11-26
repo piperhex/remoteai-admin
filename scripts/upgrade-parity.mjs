@@ -30,6 +30,7 @@ const migrations = [
   '20261030_provider_market_page.sql',
   '20261101-lounge-avatar-resolution.sql',
   '20261102_provider_market_review.sql',
+  '20261126-remote-device-ip-address.sql',
 ];
 
 // The frozen Nest schema lacks Go additions; upgrade only the fixed localhost fixture database.

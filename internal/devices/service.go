@@ -2,6 +2,7 @@ package devices
 
 import (
 	"errors"
+	"net/netip"
 	"strings"
 	"time"
 	"unicode/utf16"
@@ -16,6 +17,7 @@ type Device struct {
 	DeviceID            string    `gorm:"column:deviceId;primaryKey"          json:"deviceId"`
 	Name                string    `gorm:"column:name"                         json:"name"`
 	Platform            string    `gorm:"column:platform"                     json:"platform"`
+	IPAddress           *string   `gorm:"column:ipAddress"                    json:"ipAddress,omitempty"`
 	AppVersion          *string   `gorm:"column:appVersion"                   json:"appVersion"`
 	ActiveAccountID     *string   `gorm:"column:activeAccountId"              json:"activeAccountId"`
 	OpenAIAuthAccountID *string   `gorm:"column:openaiAuthAccountId"          json:"openaiAuthAccountId"`
@@ -75,6 +77,7 @@ func (s *Service) register(owner string, input platform.JSON) (*Device, error) {
 		device.Name = "Remote AI"
 	}
 	device.Platform = trimLimit(devicePlatform, 20)
+	device.IPAddress = deviceIP(input["ipAddress"])
 	if device.Platform == "" {
 		device.Platform = "unknown"
 	}
@@ -94,6 +97,16 @@ func (s *Service) register(owner string, input platform.JSON) (*Device, error) {
 		platform.InvalidateDeviceDirectory(s.deps, owner)
 	}
 	return device, err
+}
+
+func deviceIP(value any) *string {
+	text, _ := value.(string)
+	ip, err := netip.ParseAddr(text)
+	if err != nil || ip.Zone() != "" || !ip.Unmap().IsGlobalUnicast() {
+		return nil
+	}
+	address := ip.Unmap().String()
+	return &address
 }
 
 func mergeDeviceState(device *Device, input platform.JSON) {

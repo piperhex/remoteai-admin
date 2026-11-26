@@ -104,6 +104,9 @@ var browserHomeSchema string
 //go:embed 033_browser_extensions.sql
 var browserExtensionsSchema string
 
+//go:embed 034_device_ip_address.sql
+var deviceIPSchema string
+
 // InitializeEmpty never changes existing tables, constraints, indexes, or customer data.
 // Existing deployments continue to apply the versioned sql migrations.
 func InitializeEmpty(db *gorm.DB) error {
@@ -213,6 +216,9 @@ func InitializeEmpty(db *gorm.DB) error {
 		if err := tx.Exec(browserHomeSchema).Error; err != nil {
 			return err
 		}
-		return tx.Exec(browserExtensionsSchema).Error
+		if err := tx.Exec(browserExtensionsSchema).Error; err != nil {
+			return err
+		}
+		return tx.Exec(deviceIPSchema).Error
 	})
 }
