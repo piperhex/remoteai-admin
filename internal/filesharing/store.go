@@ -1,10 +1,8 @@
 package filesharing
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"time"
 
@@ -15,14 +13,16 @@ import (
 )
 
 const (
-	chunkBytes = 1 << 20
-	maxSize    = 10 << 30
+	chunkBytes   = 1 << 20
+	maxSize      = 10 << 30
+	uploadWindow = 6
 )
 
 var (
 	errOffset      = errors.New("unexpected chunk index")
 	errChunkSize   = errors.New("unexpected chunk size")
 	errFingerprint = errors.New("file fingerprint mismatch")
+	errIncomplete  = errors.New("upload is missing chunks")
 )
 
 type file struct {
@@ -30,6 +30,7 @@ type file struct {
 	Name          string    `json:"name"`
 	Size          int64     `json:"size"`
 	UploadedBytes int64     `json:"uploadedBytes"`
+	ReceivedBytes *int64    `json:"receivedBytes,omitempty" gorm:"->;-:migration"`
 	Fingerprint   string    `json:"fingerprint"`
 	CreatedAt     time.Time `json:"-"`
 	UpdatedAt     time.Time `json:"updatedAt"`
@@ -50,7 +51,10 @@ type store struct{ db *gorm.DB }
 
 func (s store) list(ctx context.Context) ([]file, error) {
 	items := []file{}
-	err := s.db.WithContext(ctx).Order("created_at DESC, id ASC").Find(&items).Error
+	err := s.db.WithContext(ctx).Select(`shared_files.*, CASE WHEN uploaded_bytes = size THEN size ELSE
+		(SELECT COALESCE(SUM(LEAST(?, shared_files.size - chunk_index * CAST(? AS bigint))), 0)
+		FROM shared_file_chunks WHERE file_id = shared_files.id) END AS received_bytes`, chunkBytes, chunkBytes).
+		Order("created_at DESC, id ASC").Find(&items).Error
 	return items, err
 }
 
@@ -85,24 +89,16 @@ func (s store) append(ctx context.Context, part chunk) (file, error) {
 
 func saveChunk(tx *gorm.DB, item *file, part chunk) error {
 	offset := int64(part.ChunkIndex) * chunkBytes
-	if offset >= item.Size || offset > item.UploadedBytes {
+	if offset > item.UploadedBytes {
 		return errOffset
 	}
-	if int64(len(part.Data)) != min(chunkBytes, item.Size-offset) {
-		return errChunkSize
+	if err := checkChunkSize(*item, part); err != nil {
+		return err
 	}
 	if offset < item.UploadedBytes {
-		// An acknowledgement can be lost after commit. Accept a repeat only for identical bytes.
-		var saved chunk
-		if err := tx.Select("digest").Take(&saved, "file_id = ? AND chunk_index = ?", part.FileID, part.ChunkIndex).Error; err != nil {
-			return err
-		}
-		if !bytes.Equal(saved.Digest, part.Digest) {
-			return errFingerprint
-		}
-		return nil
+		return matchSavedChunk(tx, part)
 	}
-	if err := tx.Create(&part).Error; err != nil {
+	if err := insertChunk(tx, part); err != nil {
 		return err
 	}
 	item.UploadedBytes += int64(len(part.Data))
@@ -112,22 +108,6 @@ func saveChunk(tx *gorm.DB, item *file, part chunk) error {
 		}
 	}
 	return tx.Model(item).Update("uploaded_bytes", item.UploadedBytes).Error
-}
-
-func verifyFingerprint(tx *gorm.DB, item file) error {
-	var parts []chunk
-	if err := tx.Select("digest").Where("file_id = ?", item.ID).Order("chunk_index").Find(&parts).Error; err != nil {
-		return err
-	}
-	combined := make([]byte, 0, len(parts)*sha256.Size)
-	for _, part := range parts {
-		combined = append(combined, part.Digest...)
-	}
-	digest := sha256.Sum256(combined)
-	if hex.EncodeToString(digest[:]) != item.Fingerprint {
-		return errFingerprint
-	}
-	return nil
 }
 
 func (s store) rename(ctx context.Context, item file, actor *platform.Principal) error {

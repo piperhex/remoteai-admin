@@ -35,6 +35,7 @@ func Register(router *gin.Engine, deps *platform.Dependencies) error {
 	admin.GET("/:id", read, validFileID, s.status)
 	admin.POST("", manage, s.create)
 	admin.PUT("/:id/chunks/:index", manage, validFileID, s.upload)
+	admin.POST("/:id/complete", manage, validFileID, s.complete)
 	admin.PATCH("/:id", manage, validFileID, s.rename)
 	admin.POST("/batch/delete", manage, s.remove)
 	router.GET("/shared-files/:id", validFileID, s.download)
@@ -55,11 +56,12 @@ func validFileID(c *gin.Context) {
 
 func (s service) list(c *gin.Context) {
 	items, err := s.store.list(c.Request.Context())
-	respond(c, gin.H{"items": items, "chunkBytes": chunkBytes, "maxBytes": maxSize, "maxBatch": maxBatch}, err)
+	respond(c, gin.H{"items": items, "chunkBytes": chunkBytes, "maxBytes": maxSize,
+		"maxBatch": maxBatch, "uploadWindow": uploadWindow}, err)
 }
 
 func (s service) status(c *gin.Context) {
-	item, err := s.store.get(c.Request.Context(), c.Param("id"))
+	item, err := s.store.status(c.Request.Context(), c.Param("id"))
 	respond(c, item, err)
 }
 
@@ -111,7 +113,31 @@ func (s service) upload(c *gin.Context) {
 		fail(c, http.StatusBadRequest, "fileSharing.interrupted")
 		return
 	}
-	item, err := s.store.append(c.Request.Context(), chunk{FileID: c.Param("id"), ChunkIndex: index, Data: data})
+	part := chunk{FileID: c.Param("id"), ChunkIndex: index, Data: data}
+	if expected := c.GetHeader("X-Upload-SHA256"); expected != "" {
+		s.uploadWindowChunk(c, part, expected)
+		return
+	}
+	item, err := s.store.append(c.Request.Context(), part)
+	respond(c, item, err)
+}
+
+func (s service) uploadWindowChunk(c *gin.Context, part chunk, expected string) {
+	digest := sha256.Sum256(part.Data)
+	if expected != hex.EncodeToString(digest[:]) {
+		respond(c, nil, errFingerprint)
+		return
+	}
+	part.Digest = digest[:]
+	if err := s.store.saveWindowChunk(c.Request.Context(), part); err != nil {
+		respond(c, nil, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+func (s service) complete(c *gin.Context) {
+	item, err := s.store.complete(c.Request.Context(), c.Param("id"))
 	respond(c, item, err)
 }
 
@@ -165,7 +191,7 @@ func respond(c *gin.Context, value interface{}, err error) {
 	switch {
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		fail(c, http.StatusNotFound, "fileSharing.missing")
-	case errors.Is(err, errOffset):
+	case errors.Is(err, errOffset), errors.Is(err, errIncomplete):
 		fail(c, http.StatusConflict, "fileSharing.interrupted")
 	case errors.Is(err, errChunkSize):
 		fail(c, http.StatusBadRequest, "fileSharing.interrupted")

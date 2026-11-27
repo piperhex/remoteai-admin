@@ -108,7 +108,8 @@ func TestKongRouteAuthenticationBoundaries(t *testing.T) {
 		"/admin/api/provider-market/batch/delete", "/admin/api/provider-market/batch/review",
 		"/admin/api/update-sharing/daily", "/admin/api/update-sharing/failures",
 		"/admin/api/browser-extensions", "/admin/api/browser-extensions/example/archive",
-		"/admin/api/file-sharing", "/admin/api/file-sharing/example/chunks/0", "/admin/api/file-sharing/batch/delete",
+		"/admin/api/file-sharing", "/admin/api/file-sharing/example/chunks/0",
+		"/admin/api/file-sharing/example/complete", "/admin/api/file-sharing/batch/delete",
 		"/admin/api/browser-home", "/admin/api/browser-home/archive"} {
 		_, route := matchKongRoute(services, path)
 		if !hasKongAccountJWT(route) {

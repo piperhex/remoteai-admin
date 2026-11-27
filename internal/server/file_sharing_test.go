@@ -56,7 +56,8 @@ func TestKongFileSharingManagementRequiresPermissions(t *testing.T) {
 	for _, endpoint := range []struct{ method, path, permission string }{
 		{"GET", sharingAdmin, "no-permissions"}, {"GET", idPath, "no-permissions"},
 		{"POST", sharingAdmin, "read"}, {"PUT", idPath + "/chunks/0", "read"},
-		{"PATCH", idPath, "read"}, {"POST", sharingAdmin + "/batch/delete", "read"},
+		{"PATCH", idPath, "read"}, {"POST", idPath + "/complete", "read"},
+		{"POST", sharingAdmin + "/batch/delete", "read"},
 	} {
 		t.Run(endpoint.method+endpoint.path, func(t *testing.T) {
 			sharingRequest(t, handler, httptest.NewRequest(endpoint.method, endpoint.path, nil), 401)
@@ -208,16 +209,18 @@ func openSharingDatabase(t *testing.T, dsn string) *gorm.DB {
 	return db
 }
 
-func createTestFile(t *testing.T, handler http.Handler, first, last []byte) string {
+func createTestFile(t *testing.T, handler http.Handler, parts ...[]byte) string {
 	t.Helper()
 	var manifest []byte
-	for _, data := range [][]byte{first, last} {
+	size := 0
+	for _, data := range parts {
+		size += len(data)
 		if len(data) > 0 {
 			digest := sha256.Sum256(data)
 			manifest = append(manifest, digest[:]...)
 		}
 	}
-	init := fmt.Sprintf(`{"name":"file.bin","size":%d,"fingerprint":"%x"}`, len(first)+len(last), sha256.Sum256(manifest))
+	init := fmt.Sprintf(`{"name":"file.bin","size":%d,"fingerprint":"%x"}`, size, sha256.Sum256(manifest))
 	response := sharingJSON(t, handler, "POST", sharingAdmin, init, 201)
 	var item struct{ ID string }
 	if err := json.Unmarshal(response.Body.Bytes(), &item); err != nil || item.ID == "" {
