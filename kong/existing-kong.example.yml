@@ -24,6 +24,7 @@ services:
           - /announcements
           - /browser-home
           - /browser-extensions
+          - /shared-files
           - /notifications
           - /faqs
           - /currency-rates

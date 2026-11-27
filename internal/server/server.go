@@ -11,6 +11,7 @@ import (
 	"github.com/piperhex/remoteai-admin/internal/browserhome"
 	"github.com/piperhex/remoteai-admin/internal/content"
 	"github.com/piperhex/remoteai-admin/internal/devices"
+	"github.com/piperhex/remoteai-admin/internal/filesharing"
 	"github.com/piperhex/remoteai-admin/internal/identity"
 	"github.com/piperhex/remoteai-admin/internal/platform"
 	"github.com/piperhex/remoteai-admin/internal/providermarket"
@@ -38,7 +39,7 @@ func New(deps *platform.Dependencies) (*gin.Engine, *devices.Runtime, error) {
 	router.Use(contract.Middleware(deps))
 	registrations := []func(*gin.Engine, *platform.Dependencies) error{
 		identity.Register, accounts.Register, content.Register, sshprofiles.Register, providermarket.Register,
-		browserhome.Register, browserextensions.Register,
+		browserhome.Register, browserextensions.Register, filesharing.Register,
 	}
 	for _, register := range registrations {
 		if err := register(router, deps); err != nil {

@@ -592,6 +592,18 @@ Kong 的 worker 配置和 DNS 缓存可能晚于修改生效。重建容器后�
 Compose 配置中加入并验证新别名，再更新相应上游。不要为了刷新缓存重启整个网关。
 Go 为兼容旧接口保留了 `X-Powered-By: Express`，该响应头不能判断实际运行语言。
 
+## 管理后台文件分享
+
+已有数据库先备份并执行 `sql/20261127-file-sharing.sql`，再更新 admin-go 和 admin-ui。空库初始化已包含新表。
+将 `/shared-files` 加入 Kong 的公共路由，保持 `strip_path=false` 和无账号 JWT 插件。
+上传和管理继续使用受保护的 `/admin/api` 路由，入口需允许至少 1 MiB 的请求体，
+并保留下载的 `Range` 和 `If-Range` 请求头及 `206` 响应。
+
+已完成和待续传的文件都按 1 MiB 分块存储在 PostgreSQL 中，单文件上限为 10 GiB。
+部署时为文件、数据库备份和 WAL 预留空间。浏览器通过 HTTPS 使用文件校验功能。
+验收时上传一个超过 1 MiB 的文件，暂停并续传。用匿名请求验证下载链接的 `HEAD` 和范围 `GET`，
+并确认批量删除后原链接返回 `404`。
+
 ## 验收与回滚
 
 启用远程桌面视频中继时，按 [DESKTOP-RELAY.md](DESKTOP-RELAY.md) 追加 Compose 文件并验证视频与控制。

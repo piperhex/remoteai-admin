@@ -107,6 +107,9 @@ var browserExtensionsSchema string
 //go:embed 034_device_ip_address.sql
 var deviceIPSchema string
 
+//go:embed 035_file_sharing.sql
+var fileSharingSchema string
+
 // InitializeEmpty never changes existing tables, constraints, indexes, or customer data.
 // Existing deployments continue to apply the versioned sql migrations.
 func InitializeEmpty(db *gorm.DB) error {
@@ -219,6 +222,9 @@ func InitializeEmpty(db *gorm.DB) error {
 		if err := tx.Exec(browserExtensionsSchema).Error; err != nil {
 			return err
 		}
-		return tx.Exec(deviceIPSchema).Error
+		if err := tx.Exec(deviceIPSchema).Error; err != nil {
+			return err
+		}
+		return tx.Exec(fileSharingSchema).Error
 	})
 }

@@ -32,6 +32,7 @@ func catalog() permissionCatalog {
 	addProviderMarketPermissions(&result)
 	addBrowserHomePermissions(&result)
 	addBrowserExtensionsPermissions(&result)
+	addFileSharingPermissions(&result)
 	return result
 }
 

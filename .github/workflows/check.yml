@@ -22,7 +22,15 @@ jobs:
         env:
           COMPOSE_CONFIG_TEST: '1'
         run: python3 -B -m unittest discover -s scripts -p 'test_deployment_*.py' -v
-      - name: Race tests with Redis
+      - name: Race tests with Redis and PostgreSQL
         run: |
           docker run --detach --rm --name admin-test-redis -p 127.0.0.1:16389:6379 redis:7-alpine
-          TELEMETRY_TEST_REDIS=127.0.0.1:16389 UPDATE_PEER_TEST_REDIS=127.0.0.1:16389 go test -race ./...
+          docker run --detach --rm --name admin-test-file-sharing -p 127.0.0.1:15482:5432 \
+            -e POSTGRES_USER=sharing -e POSTGRES_PASSWORD=sharing-fixture -e POSTGRES_DB=sharing_test postgres:16-alpine
+          for attempt in $(seq 1 30); do
+            if docker exec admin-test-file-sharing pg_isready -h 127.0.0.1 -U sharing -d sharing_test; then break; fi
+            sleep 1
+          done
+          export FILE_SHARING_TEST_POSTGRES=postgres://sharing:sharing-fixture@127.0.0.1:15482/sharing_test?sslmode=disable
+          export TELEMETRY_TEST_REDIS=127.0.0.1:16389 UPDATE_PEER_TEST_REDIS=127.0.0.1:16389
+          go test -race ./...
