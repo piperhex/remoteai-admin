@@ -16,22 +16,24 @@ import (
 )
 
 type portMapping struct {
-	ID          string `json:"id"`
-	RemoteHost  string `json:"remoteHost"`
-	RemotePort  int    `json:"remotePort"`
-	LocalPort   int    `json:"localPort"`
-	Protocol    string `json:"protocol,omitempty"`
-	UpdatedAt   int64  `json:"updatedAt,omitempty"`
-	LocalDomain string `json:"localDomain,omitempty"`
+	ID           string `json:"id"`
+	RemoteHost   string `json:"remoteHost"`
+	RemotePort   int    `json:"remotePort"`
+	LocalPort    int    `json:"localPort"`
+	Protocol     string `json:"protocol,omitempty"`
+	UpdatedAt    int64  `json:"updatedAt,omitempty"`
+	LocalDomain  string `json:"localDomain,omitempty"`
+	LinkProtocol string `json:"linkProtocol,omitempty"`
 }
 
 type mappingDocument struct {
-	OwnerID             string        `gorm:"column:ownerId;primaryKey" json:"-"`
-	DeviceID            string        `gorm:"column:deviceId;primaryKey" json:"-"`
-	Revision            int64         `json:"revision"`
-	Mappings            []portMapping `gorm:"serializer:json" json:"mappings"`
-	Accepted            bool          `gorm:"-" json:"accepted"`
-	SupportsLocalDomain bool          `gorm:"-" json:"supportsLocalDomain,omitempty"`
+	OwnerID              string        `gorm:"column:ownerId;primaryKey" json:"-"`
+	DeviceID             string        `gorm:"column:deviceId;primaryKey" json:"-"`
+	Revision             int64         `json:"revision"`
+	Mappings             []portMapping `gorm:"serializer:json" json:"mappings"`
+	Accepted             bool          `gorm:"-" json:"accepted"`
+	SupportsLocalDomain  bool          `gorm:"-" json:"supportsLocalDomain,omitempty"`
+	SupportsLinkProtocol bool          `gorm:"-" json:"supportsLinkProtocol,omitempty"`
 }
 
 func (mappingDocument) TableName() string { return "device_port_mappings" }
@@ -53,6 +55,7 @@ func (s *Service) portMappings(c *gin.Context) {
 	}
 	var incoming *mappingDocument
 	supportsDomain := c.Query("localDomain") == "1"
+	supportsLinkProtocol := c.Query("linkProtocol") == "1"
 	if c.Request.Method == http.MethodPut {
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 16*1024)
 		incoming = &mappingDocument{}
@@ -61,17 +64,24 @@ func (s *Service) portMappings(c *gin.Context) {
 			return
 		}
 		incoming.SupportsLocalDomain = supportsDomain
+		incoming.SupportsLinkProtocol = supportsLinkProtocol
 	}
 	result, err := s.syncPortMappings(c.Request.Context(), owner, device, incoming)
-	platform.Respond(c, portMappingResponse(result, supportsDomain), err)
+	platform.Respond(c, portMappingResponse(result, supportsDomain, supportsLinkProtocol), err)
 }
 
-func portMappingResponse(result mappingDocument, supportsDomain bool) mappingDocument {
+func portMappingResponse(result mappingDocument, supportsDomain, supportsLinkProtocol bool) mappingDocument {
 	result.SupportsLocalDomain = supportsDomain
-	if !supportsDomain {
+	result.SupportsLinkProtocol = supportsLinkProtocol
+	if !supportsDomain || !supportsLinkProtocol {
 		result.Mappings = slices.Clone(result.Mappings)
 		for i := range result.Mappings {
-			result.Mappings[i].LocalDomain = ""
+			if !supportsDomain {
+				result.Mappings[i].LocalDomain = ""
+			}
+			if !supportsLinkProtocol {
+				result.Mappings[i].LinkProtocol = ""
+			}
 		}
 	}
 	return result
@@ -100,6 +110,9 @@ func validatePortMappings(doc mappingDocument) error {
 	seen := map[string]bool{}
 	for _, entry := range doc.Mappings {
 		if entry.Protocol != "" && entry.Protocol != "tcp" && entry.Protocol != "udp" && entry.Protocol != "both" {
+			return invalid
+		}
+		if entry.LinkProtocol != "" && entry.LinkProtocol != "http" && entry.LinkProtocol != "https" {
 			return invalid
 		}
 		ip := net.ParseIP(entry.RemoteHost)
@@ -151,17 +164,23 @@ func (s *Service) syncPortMappings(ctx context.Context, owner, device string,
 }
 
 func mergeMappingWrite(saved []portMapping, incoming mappingDocument) []portMapping {
-	if incoming.SupportsLocalDomain {
+	if incoming.SupportsLocalDomain && incoming.SupportsLinkProtocol {
 		return incoming.Mappings
 	}
-	// Older clients omit the domain when they upload a complete replacement document.
-	domains := make(map[string]string, len(saved))
+	// Older clients upload complete documents without fields they cannot represent.
+	previous := make(map[string]portMapping, len(saved))
 	for _, entry := range saved {
-		domains[entry.ID] = entry.LocalDomain
+		previous[entry.ID] = entry
 	}
 	mappings := slices.Clone(incoming.Mappings)
 	for i := range mappings {
-		mappings[i].LocalDomain = domains[mappings[i].ID]
+		prior := previous[mappings[i].ID]
+		if !incoming.SupportsLocalDomain {
+			mappings[i].LocalDomain = prior.LocalDomain
+		}
+		if !incoming.SupportsLinkProtocol {
+			mappings[i].LinkProtocol = prior.LinkProtocol
+		}
 	}
 	return mappings
 }

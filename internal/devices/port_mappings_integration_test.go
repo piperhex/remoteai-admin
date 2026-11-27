@@ -78,12 +78,12 @@ func TestPortMappingSyncDatabaseAndOwnership(t *testing.T) {
 	if code != 200 || initial.Revision != 0 || len(initial.Mappings) != 0 {
 		t.Fatal("initial document")
 	}
-	query = "?localDomain=1"
+	query = "?localDomain=1&linkProtocol=1"
 	initial.Mappings = []portMapping{{ID: "mapping-1", RemoteHost: "127.0.0.1", RemotePort: 3000,
-		LocalPort: 13000, LocalDomain: "app.localhost"}}
+		LocalPort: 13000, LocalDomain: "app.localhost", LinkProtocol: "https"}}
 	code, saved := request("PUT", device, &initial)
 	if code != 200 || !saved.Accepted || saved.Revision != 1 || !saved.SupportsLocalDomain ||
-		saved.Mappings[0].LocalDomain != "app.localhost" {
+		saved.Mappings[0].LocalDomain != "app.localhost" || !saved.SupportsLinkProtocol || saved.Mappings[0].LinkProtocol != "https" {
 		t.Fatal("save failed")
 	}
 	_, stale := request("PUT", device, &initial)
@@ -100,9 +100,9 @@ func TestPortMappingSyncDatabaseAndOwnership(t *testing.T) {
 	if !legacySaved.Accepted || legacySaved.Mappings[0].LocalDomain != "" {
 		t.Fatal("legacy save failed")
 	}
-	query = "?localDomain=1"
+	query = "?localDomain=1&linkProtocol=1"
 	_, saved = request("GET", device, nil)
-	if saved.Mappings[0].LocalDomain != "app.localhost" || saved.Mappings[0].LocalPort != 14000 {
+	if saved.Mappings[0].LocalDomain != "app.localhost" || saved.Mappings[0].LocalPort != 14000 || saved.Mappings[0].LinkProtocol != "https" {
 		t.Fatal("a legacy edit lost either the domain or the port change")
 	}
 	saved.Mappings = []portMapping{}

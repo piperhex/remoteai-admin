@@ -21,6 +21,7 @@ func TestPortMappingValidation(t *testing.T) {
 		func(v *portMapping) { v.RemotePort = 0 },
 		func(v *portMapping) { v.LocalPort = 65536 },
 		func(v *portMapping) { v.Protocol = "icmp" },
+		func(v *portMapping) { v.LinkProtocol = "file" },
 		func(v *portMapping) { v.LocalDomain = "http://app.localhost:8080" },
 		func(v *portMapping) { v.LocalDomain = "127.0.0.1" },
 		func(v *portMapping) { v.LocalDomain = "host..test" },
@@ -45,7 +46,7 @@ func TestPortMappingDomainPersistsThroughLegacyClientWrites(t *testing.T) {
 	entry := portMapping{ID: "mapping", RemoteHost: "127.0.0.1", RemotePort: 3000,
 		LocalPort: 13000, LocalDomain: "app.localhost"}
 	saved := mappingDocument{Revision: 1, Mappings: []portMapping{entry}}
-	legacy := portMappingResponse(saved, false)
+	legacy := portMappingResponse(saved, false, false)
 	if legacy.SupportsLocalDomain || legacy.Mappings[0].LocalDomain != "" || saved.Mappings[0].LocalDomain != "app.localhost" {
 		t.Fatal("legacy response must omit the domain without modifying the stored configuration")
 	}
@@ -54,13 +55,32 @@ func TestPortMappingDomainPersistsThroughLegacyClientWrites(t *testing.T) {
 	if merged[0].LocalDomain != "app.localhost" || merged[0].RemotePort != 8080 {
 		t.Fatal("a legacy write lost the configured domain")
 	}
-	latest := portMappingResponse(mappingDocument{Mappings: merged}, true)
+	latest := portMappingResponse(mappingDocument{Mappings: merged}, true, false)
 	if !latest.SupportsLocalDomain || latest.Mappings[0].LocalDomain != "app.localhost" {
 		t.Fatal("new clients must see the configured domain")
 	}
 	latest.Mappings[0].LocalDomain = ""
 	if cleared := mergeMappingWrite(saved.Mappings, latest); cleared[0].LocalDomain != "" {
 		t.Fatal("new clients must be able to clear the domain")
+	}
+}
+
+func TestLinkProtocolSurvivesLegacyWriteAndCanBeChangedToHTTP(t *testing.T) {
+	doc := mappingDocument{Mappings: []portMapping{{ID: "web", LinkProtocol: "https"}}}
+	legacy := portMappingResponse(doc, true, false)
+	if legacy.SupportsLinkProtocol || legacy.Mappings[0].LinkProtocol != "" {
+		t.Fatal("legacy response exposed the link protocol")
+	}
+	legacy.Mappings[0].LocalDomain = "edited.localhost"
+	saved := mergeMappingWrite(doc.Mappings, legacy)
+	current := portMappingResponse(mappingDocument{Mappings: saved}, true, true)
+	if !current.SupportsLinkProtocol || current.Mappings[0].LinkProtocol != "https" ||
+		current.Mappings[0].LocalDomain != "edited.localhost" {
+		t.Fatal("legacy edit lost the protocol or domain")
+	}
+	current.Mappings[0].LinkProtocol = "http"
+	if mergeMappingWrite(saved, current)[0].LinkProtocol != "http" {
+		t.Fatal("updated client could not switch back to HTTP")
 	}
 }
 
